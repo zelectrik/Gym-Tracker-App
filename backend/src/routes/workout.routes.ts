@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { addSetHandler, createSessionHandler, createTemplateHandler, getSessionsHandler, getTemplatesHandler, updateSessionStatusHandler } from "../controllers/workout.controller";
+import { requireAuth } from "../middlewares/auth.middleware";
+const router = Router();
+router.use(requireAuth);
+router.get("/templates", getTemplatesHandler);
+router.post("/templates", createTemplateHandler);
+router.get("/sessions", getSessionsHandler);
+router.post("/sessions", createSessionHandler);
+router.patch("/sessions/:sessionId/status", updateSessionStatusHandler);
+router.post("/session-exercises/:sessionExerciseId/sets", addSetHandler);
+export default router;

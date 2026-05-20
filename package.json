@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "vercel": "^53.1.0"
+  },
+  "scripts": {
+    "dev:db": "docker compose up -d",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "setup:backend": "npm --prefix backend install && npm --prefix backend run db:generate && npm --prefix backend run db:migrate && npm --prefix backend run create:super-admin",
+    "setup:frontend": "npm --prefix frontend install",
+    "typecheck": "npm --prefix backend run typecheck && npm --prefix frontend run typecheck"
+  }
+}

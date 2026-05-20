@@ -1,0 +1,12 @@
+export type UserRole = "USER" | "SUPER_ADMIN";
+export type WorkoutStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type MuscleGroup = "CHEST" | "BACK" | "SHOULDERS" | "BICEPS" | "TRICEPS" | "LEGS" | "GLUTES" | "ABS" | "CARDIO" | "FULL_BODY" | "OTHER";
+
+export type User = { id: string; email: string; displayName: string; role: UserRole };
+export type Exercise = { id: string; name: string; muscleGroup: MuscleGroup; description?: string | null; createdAt?: string; updatedAt?: string };
+export type TemplateExercise = { id: string; exerciseId: string; exercise: Exercise; position: number; targetSets: number; targetReps?: number | null; targetDurationSec?: number | null; restSeconds?: number | null; notes?: string | null };
+export type WorkoutTemplate = { id: string; name: string; description?: string | null; exercises: TemplateExercise[]; createdAt?: string };
+export type ExerciseSet = { id: string; sessionExerciseId: string; setNumber: number; reps?: number | null; weightKg?: number | null; durationSec?: number | null; distanceMeters?: number | null; completed?: boolean };
+export type SessionExercise = { id: string; exerciseId: string; exercise: Exercise; position: number; notes?: string | null; sets: ExerciseSet[] };
+export type WorkoutSession = { id: string; title: string; status: WorkoutStatus; templateId?: string | null; scheduledAt?: string | null; startedAt?: string | null; completedAt?: string | null; exercises: SessionExercise[]; participants: { user: Pick<User, "id" | "email" | "displayName"> }[]; createdAt?: string };
+export type Progress = { totalSessions: number; totalSets: number; totalVolumeKg: number; recentSessions: WorkoutSession[] };

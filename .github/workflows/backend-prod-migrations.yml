@@ -1,0 +1,47 @@
+name: Backend Production Migrations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate-production:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: backend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: npx prisma generate
+
+      - name: Show migration status before deploy
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: npx prisma migrate status
+
+      - name: Apply production migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: npx prisma migrate deploy
+
+      - name: Show migration status after deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: npx prisma migrate status

@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  LEGS
+  GLUTES
+  ABS
+  CARDIO
+  FULL_BODY
+  OTHER
+}
+
+enum WorkoutStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  displayName  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedTemplates WorkoutTemplate[] @relation("TemplateOwner")
+  workoutParticipations WorkoutParticipant[]
+}
+
+model Exercise {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  muscleGroup MuscleGroup
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  templateExercises TemplateExercise[]
+  sessionExercises  SessionExercise[]
+}
+
+model WorkoutTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner     User @relation("TemplateOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  exercises TemplateExercise[]
+  sessions  WorkoutSession[]
+
+  @@index([ownerId])
+}
+
+model TemplateExercise {
+  id                String @id @default(uuid())
+  workoutTemplateId String
+  exerciseId        String
+  position          Int
+  targetSets        Int
+  targetReps        Int?
+  targetDurationSec Int?
+  restSeconds       Int?
+  notes             String?
+
+  workoutTemplate WorkoutTemplate @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  exercise        Exercise        @relation(fields: [exerciseId], references: [id])
+
+  @@unique([workoutTemplateId, position])
+  @@index([exerciseId])
+}
+
+model WorkoutSession {
+  id          String        @id @default(uuid())
+  title       String
+  status      WorkoutStatus @default(PLANNED)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?
+  templateId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  template     WorkoutTemplate?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  participants WorkoutParticipant[]
+  exercises    SessionExercise[]
+
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model WorkoutParticipant {
+  id        String @id @default(uuid())
+  sessionId String
+  userId    String
+
+  session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+model SessionExercise {
+  id        String @id @default(uuid())
+  sessionId String
+  exerciseId String
+  position  Int
+  notes     String?
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise       @relation(fields: [exerciseId], references: [id])
+  sets     ExerciseSet[]
+
+  @@unique([sessionId, position])
+  @@index([exerciseId])
+}
+
+model ExerciseSet {
+  id                String @id @default(uuid())
+  sessionExerciseId String
+  setNumber         Int
+  reps              Int?
+  weightKg          Float?
+  durationSec       Int?
+  distanceMeters    Int?
+  completed         Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionExerciseId, setNumber])
+}
