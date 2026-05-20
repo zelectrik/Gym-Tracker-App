@@ -2,16 +2,28 @@ import { z } from "zod";
 
 export const muscleGroups = [
   "CHEST",
+  "UPPER_CHEST",
   "BACK",
+  "LATS",
+  "TRAPS",
   "SHOULDERS",
+  "FRONT_SHOULDERS",
+  "REAR_SHOULDERS",
   "BICEPS",
   "TRICEPS",
-  "LEGS",
-  "GLUTES",
+  "FOREARMS",
   "ABS",
+  "OBLIQUES",
+  "LOWER_BACK",
+  "QUADS",
+  "HAMSTRINGS",
+  "GLUTES",
+  "CALVES",
+  "ADDUCTORS",
+  "ABDUCTORS",
   "CARDIO",
+  "CORE",
   "FULL_BODY",
-  "OTHER",
 ] as const;
 
 export const muscleTags = [
@@ -19,8 +31,11 @@ export const muscleTags = [
   "haut_pectoraux",
   "dos",
   "grand_dorsal",
+  "trapezes",
   "trapèzes",
+  "epaules",
   "épaules",
+  "epaules_laterales",
   "avant_epaules",
   "arriere_epaules",
   "biceps",
@@ -40,7 +55,14 @@ export const muscleTags = [
   "full_body",
 ] as const;
 
-export const exerciseTypes = ["machine", "dumbbell", "barbell", "cable", "bodyweight", "cardio"] as const;
+export const exerciseTypes = [
+  "machine",
+  "dumbbell",
+  "barbell",
+  "cable",
+  "bodyweight",
+  "cardio",
+] as const;
 
 export const createExerciseSchema = z.object({
   name: z.string().trim().min(1),

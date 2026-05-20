@@ -156,18 +156,19 @@ model WorkoutParticipant {
 }
 
 model SessionExercise {
-  id        String @id @default(uuid())
-  sessionId String
-  exerciseId String
-  position        Int
-  targetSets      Int?
-  targetReps      Int?
-  restSeconds     Int?
-  executionMode   ExecutionMode @default(BILATERAL)
-  targetWeightKg  Float?
-  leftWeightKg    Float?
-  rightWeightKg   Float?
-  notes           String?
+  id                String @id @default(uuid())
+  sessionId         String
+  exerciseId        String
+  position          Int
+  targetSets        Int?
+  targetReps        Int?
+  targetDurationSec Int?
+  restSeconds       Int?
+  executionMode     ExecutionMode @default(BILATERAL)
+  targetWeightKg    Float?
+  leftWeightKg      Float?
+  rightWeightKg     Float?
+  notes             String?
 
   session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise       @relation(fields: [exerciseId], references: [id])

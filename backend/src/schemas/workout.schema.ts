@@ -10,6 +10,14 @@ export const exerciseSides = ["BOTH", "LEFT", "RIGHT"] as const;
 export const executionModes = ["BILATERAL", "LEFT_RIGHT"] as const;
 
 const optionalDate = z.string().datetime().optional();
+const repsOrRangeSchema = z.union([
+  z.number().int().min(1),
+  z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+]);
+const durationOrRangeSchema = z.union([
+  z.number().int().min(1),
+  z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+]);
 
 const plannedExerciseSchema = z.object({
   exerciseId: z.string().uuid(),
@@ -39,6 +47,27 @@ export const createWorkoutTemplateSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().optional(),
   exercises: z.array(plannedExerciseSchema).min(1),
+});
+
+export const importProgramTemplateSchema = z.object({
+  program: z.array(
+    z.object({
+      name: z.string().trim().min(1),
+      type: z.string().trim().optional(),
+      exercises: z.array(
+        z.object({
+          exerciseName: z.string().trim().min(1),
+          reference: z.string().trim().optional(),
+          category: z.string().trim().optional(),
+          sets: z.number().int().min(1),
+          reps: repsOrRangeSchema.optional(),
+          durationSeconds: durationOrRangeSchema.optional(),
+          unilateral: z.boolean().optional(),
+          muscles: z.array(z.string().trim().min(1)).optional(),
+        }),
+      ).min(1),
+    }),
+  ).min(1),
 });
 
 export const createWorkoutSessionSchema = z.object({

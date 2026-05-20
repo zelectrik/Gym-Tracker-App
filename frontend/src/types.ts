@@ -1,7 +1,56 @@
 export type UserRole = "USER" | "SUPER_ADMIN";
 export type WorkoutStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-export type MuscleGroup = "CHEST" | "BACK" | "SHOULDERS" | "BICEPS" | "TRICEPS" | "LEGS" | "GLUTES" | "ABS" | "CARDIO" | "FULL_BODY" | "OTHER";
-export type MuscleTag = "pectoraux" | "haut_pectoraux" | "dos" | "grand_dorsal" | "trapèzes" | "épaules" | "avant_epaules" | "arriere_epaules" | "biceps" | "triceps" | "avant_bras" | "abdominaux" | "obliques" | "lombaires" | "quadriceps" | "ischios" | "fessiers" | "mollets" | "adducteurs" | "abducteurs" | "cardio" | "core" | "full_body";
+export type MuscleGroup =
+  | "CHEST"
+  | "UPPER_CHEST"
+  | "BACK"
+  | "LATS"
+  | "TRAPS"
+  | "SHOULDERS"
+  | "FRONT_SHOULDERS"
+  | "REAR_SHOULDERS"
+  | "BICEPS"
+  | "TRICEPS"
+  | "FOREARMS"
+  | "ABS"
+  | "OBLIQUES"
+  | "LOWER_BACK"
+  | "QUADS"
+  | "HAMSTRINGS"
+  | "GLUTES"
+  | "CALVES"
+  | "ADDUCTORS"
+  | "ABDUCTORS"
+  | "CARDIO"
+  | "CORE"
+  | "FULL_BODY";
+export type MuscleTag =
+  | "pectoraux"
+  | "haut_pectoraux"
+  | "dos"
+  | "grand_dorsal"
+  | "trapezes"
+  | "trapèzes"
+  | "epaules"
+  | "épaules"
+  | "epaules_laterales"
+  | "avant_epaules"
+  | "arriere_epaules"
+  | "biceps"
+  | "triceps"
+  | "avant_bras"
+  | "abdominaux"
+  | "obliques"
+  | "lombaires"
+  | "quadriceps"
+  | "ischios"
+  | "fessiers"
+  | "mollets"
+  | "adducteurs"
+  | "abducteurs"
+  | "cardio"
+  | "core"
+  | "full_body";
 export type ExerciseType = "machine" | "dumbbell" | "barbell" | "cable" | "bodyweight" | "cardio";
 export type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
 export type ExecutionMode = "BILATERAL" | "LEFT_RIGHT";
@@ -32,6 +81,7 @@ export type SessionExercise = {
   position: number;
   targetSets?: number | null;
   targetReps?: number | null;
+  targetDurationSec?: number | null;
   restSeconds?: number | null;
   executionMode: ExecutionMode;
   targetWeightKg?: number | null;
@@ -42,3 +92,22 @@ export type SessionExercise = {
 };
 export type WorkoutSession = { id: string; title: string; status: WorkoutStatus; templateId?: string | null; scheduledAt?: string | null; startedAt?: string | null; completedAt?: string | null; exercises: SessionExercise[]; participants: { user: Pick<User, "id" | "email" | "displayName"> }[]; createdAt?: string };
 export type Progress = { totalSessions: number; totalSets: number; totalVolumeKg: number; recentSessions: WorkoutSession[] };
+
+export type ImportProgramExercise = {
+  exerciseName: string;
+  reference?: string;
+  category?: string;
+  sets: number;
+  reps?: number | [number, number];
+  durationSeconds?: number | [number, number];
+  unilateral?: boolean;
+  muscles?: string[];
+};
+export type ImportProgramPayload = {
+  program: Array<{
+    name: string;
+    type?: string;
+    exercises: ImportProgramExercise[];
+  }>;
+};
+export type ImportProgramResult = { importedCount: number; templates: WorkoutTemplate[] };

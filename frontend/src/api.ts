@@ -8,6 +8,8 @@ import type {
   WorkoutSession,
   WorkoutStatus,
   WorkoutTemplate,
+  ImportProgramPayload,
+  ImportProgramResult,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -73,6 +75,11 @@ export const api = {
       body: JSON.stringify(body),
     }),
   templates: () => request<WorkoutTemplate[]>("/workouts/templates"),
+  importProgramTemplates: (body: ImportProgramPayload) =>
+    request<ImportProgramResult>("/workouts/templates/import-json", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   createTemplate: (body: {
     name: string;
     description?: string;
@@ -81,6 +88,7 @@ export const api = {
       position: number;
       targetSets: number;
       targetReps?: number;
+      targetDurationSec?: number;
       restSeconds?: number;
       executionMode?: ExecutionMode;
       targetWeightKg?: number;
@@ -102,6 +110,7 @@ export const api = {
       position: number;
       targetSets?: number;
       targetReps?: number;
+      targetDurationSec?: number;
       restSeconds?: number;
       executionMode?: ExecutionMode;
       targetWeightKg?: number;
