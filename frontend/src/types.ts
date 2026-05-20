@@ -1,5 +1,9 @@
 export type UserRole = "USER" | "SUPER_ADMIN";
-export type WorkoutStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type WorkoutStatus =
+  | "PLANNED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
 export type MuscleGroup =
   | "CHEST"
   | "UPPER_CHEST"
@@ -30,9 +34,7 @@ export type MuscleTag =
   | "dos"
   | "grand_dorsal"
   | "trapezes"
-  | "trapèzes"
   | "epaules"
-  | "épaules"
   | "epaules_laterales"
   | "avant_epaules"
   | "arriere_epaules"
@@ -42,21 +44,43 @@ export type MuscleTag =
   | "abdominaux"
   | "obliques"
   | "lombaires"
+  | "bas_dos"
   | "quadriceps"
   | "ischios"
   | "fessiers"
   | "mollets"
   | "adducteurs"
   | "abducteurs"
+  | "jambes"
   | "cardio"
   | "core"
   | "full_body";
-export type ExerciseType = "machine" | "dumbbell" | "barbell" | "cable" | "bodyweight" | "cardio";
+export type ExerciseType =
+  | "machine"
+  | "dumbbell"
+  | "barbell"
+  | "cable"
+  | "bodyweight"
+  | "cardio";
 export type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
 export type ExecutionMode = "BILATERAL" | "LEFT_RIGHT";
 
-export type User = { id: string; email: string; displayName: string; role: UserRole };
-export type Exercise = { id: string; name: string; muscleGroup: MuscleGroup; type: ExerciseType; muscles: MuscleTag[]; description?: string | null; createdAt?: string; updatedAt?: string };
+export type User = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+};
+export type Exercise = {
+  id: string;
+  name: string;
+  muscleGroup: MuscleGroup;
+  type: ExerciseType;
+  muscles: MuscleTag[];
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
 export type TemplateExercise = {
   id: string;
   exerciseId: string;
@@ -72,8 +96,24 @@ export type TemplateExercise = {
   rightWeightKg?: number | null;
   notes?: string | null;
 };
-export type WorkoutTemplate = { id: string; name: string; description?: string | null; exercises: TemplateExercise[]; createdAt?: string };
-export type ExerciseSet = { id: string; sessionExerciseId: string; setNumber: number; side: ExerciseSide; reps?: number | null; weightKg?: number | null; durationSec?: number | null; distanceMeters?: number | null; completed?: boolean };
+export type WorkoutTemplate = {
+  id: string;
+  name: string;
+  description?: string | null;
+  exercises: TemplateExercise[];
+  createdAt?: string;
+};
+export type ExerciseSet = {
+  id: string;
+  sessionExerciseId: string;
+  setNumber: number;
+  side: ExerciseSide;
+  reps?: number | null;
+  weightKg?: number | null;
+  durationSec?: number | null;
+  distanceMeters?: number | null;
+  completed?: boolean;
+};
 export type SessionExercise = {
   id: string;
   exerciseId: string;
@@ -90,8 +130,24 @@ export type SessionExercise = {
   notes?: string | null;
   sets: ExerciseSet[];
 };
-export type WorkoutSession = { id: string; title: string; status: WorkoutStatus; templateId?: string | null; scheduledAt?: string | null; startedAt?: string | null; completedAt?: string | null; exercises: SessionExercise[]; participants: { user: Pick<User, "id" | "email" | "displayName"> }[]; createdAt?: string };
-export type Progress = { totalSessions: number; totalSets: number; totalVolumeKg: number; recentSessions: WorkoutSession[] };
+export type WorkoutSession = {
+  id: string;
+  title: string;
+  status: WorkoutStatus;
+  templateId?: string | null;
+  scheduledAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  exercises: SessionExercise[];
+  participants: { user: Pick<User, "id" | "email" | "displayName"> }[];
+  createdAt?: string;
+};
+export type Progress = {
+  totalSessions: number;
+  totalSets: number;
+  totalVolumeKg: number;
+  recentSessions: WorkoutSession[];
+};
 
 export type ImportProgramExercise = {
   exerciseName: string;
@@ -110,4 +166,7 @@ export type ImportProgramPayload = {
     exercises: ImportProgramExercise[];
   }>;
 };
-export type ImportProgramResult = { importedCount: number; templates: WorkoutTemplate[] };
+export type ImportProgramResult = {
+  importedCount: number;
+  templates: WorkoutTemplate[];
+};

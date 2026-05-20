@@ -3,6 +3,8 @@ import {
   addSetHandler,
   createSessionHandler,
   createTemplateHandler,
+  updateTemplateHandler,
+  deleteTemplateHandler,
   getSessionsHandler,
   getTemplatesHandler,
   importProgramTemplatesHandler,
@@ -15,6 +17,8 @@ const router = Router();
 router.use(requireAuth);
 router.get("/templates", getTemplatesHandler);
 router.post("/templates", createTemplateHandler);
+router.patch("/templates/:templateId", updateTemplateHandler);
+router.delete("/templates/:templateId", deleteTemplateHandler);
 router.post("/templates/import-json", importProgramTemplatesHandler);
 router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);
