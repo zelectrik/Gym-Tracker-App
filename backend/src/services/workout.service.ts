@@ -104,9 +104,7 @@ const muscleGroupByTag: Record<string, MuscleGroup> = {
   rhomboides: "BACK",
   rhomboïdes: "BACK",
   trapezes: "BACK",
-  trapèzes: "BACK",
   epaules: "SHOULDERS",
-  épaules: "SHOULDERS",
   epaules_laterales: "SHOULDERS",
   épaules_laterales: "SHOULDERS",
   avant_epaules: "SHOULDERS",
@@ -150,7 +148,9 @@ function getPrimaryMuscleGroup(
 ): MuscleGroup {
   if (category === "cardio") return "CARDIO";
   const firstMuscle = muscles?.[0] ? normalizeMuscleTag(muscles[0]) : undefined;
-  return firstMuscle ? (muscleGroupByTag[firstMuscle] ?? "FULL_BODY") : "FULL_BODY";
+  return firstMuscle
+    ? (muscleGroupByTag[firstMuscle] ?? "FULL_BODY")
+    : "FULL_BODY";
 }
 
 function firstValue(value: number | [number, number] | undefined) {
@@ -423,3 +423,31 @@ export const addSet = (sessionExerciseId: string, data: any) =>
     update: { ...data, side: data.side ?? "BOTH" },
     create: { ...data, side: data.side ?? "BOTH", sessionExerciseId },
   });
+
+export const updateTemplate = async (
+  ownerId: string,
+  templateId: string,
+  data: any,
+) => {
+  await prisma.templateExercise.deleteMany({
+    where: { workoutTemplateId: templateId },
+  });
+
+  return prisma.workoutTemplate.update({
+    where: { id: templateId, ownerId },
+    data: {
+      name: data.name,
+      description: data.description,
+      exercises: {
+        create: data.exercises,
+      },
+    },
+    include: includeTemplate,
+  });
+};
+
+export const deleteTemplate = async (ownerId: string, templateId: string) => {
+  return prisma.workoutTemplate.delete({
+    where: { id: templateId, ownerId },
+  });
+};

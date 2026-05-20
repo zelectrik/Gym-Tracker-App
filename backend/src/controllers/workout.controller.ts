@@ -10,11 +10,24 @@ import {
   addSet,
   createSession,
   createTemplate,
+  updateTemplate,
+  deleteTemplate,
   getSessionsForUser,
   getTemplates,
   importProgramTemplates,
   updateSessionStatus,
 } from "../services/workout.service";
+
+export const updateTemplateHandler = async (req: Request, res: Response) => {
+  const parsed = createWorkoutTemplateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  return res.status(200).json(await updateTemplate(req.user!.id, req.params.templateId as string, parsed.data));
+};
+
+export const deleteTemplateHandler = async (req: Request, res: Response) => {
+  await deleteTemplate(req.user!.id, req.params.templateId as string);
+  return res.status(204).send();
+};
 
 export const createTemplateHandler = async (req: Request, res: Response) => {
   const parsed = createWorkoutTemplateSchema.safeParse(req.body);

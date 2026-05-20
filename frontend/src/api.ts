@@ -80,6 +80,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  updateTemplate: (templateId: string, body: any) =>
+    request<WorkoutTemplate>(`/workouts/templates/${templateId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteTemplate: (templateId: string) =>
+    request(`/workouts/templates/${templateId}`, {
+      method: "DELETE",
+    }),
+
   createTemplate: (body: {
     name: string;
     description?: string;
