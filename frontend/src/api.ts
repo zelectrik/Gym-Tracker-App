@@ -1,11 +1,15 @@
 import type {
   Exercise,
+  ExerciseSide,
+  ExecutionMode,
   MuscleGroup,
   Progress,
   User,
   WorkoutSession,
   WorkoutStatus,
   WorkoutTemplate,
+  ImportProgramPayload,
+  ImportProgramResult,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -38,11 +42,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
-  if (!res.ok)
+  if (!res.ok) {
     throw new ApiError(
       res.status,
       typeof data?.error === "string" ? data.error : "Erreur API",
     );
+  }
+
   return data as T;
 }
 
@@ -69,6 +75,11 @@ export const api = {
       body: JSON.stringify(body),
     }),
   templates: () => request<WorkoutTemplate[]>("/workouts/templates"),
+  importProgramTemplates: (body: ImportProgramPayload) =>
+    request<ImportProgramResult>("/workouts/templates/import-json", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   createTemplate: (body: {
     name: string;
     description?: string;
@@ -77,7 +88,12 @@ export const api = {
       position: number;
       targetSets: number;
       targetReps?: number;
+      targetDurationSec?: number;
       restSeconds?: number;
+      executionMode?: ExecutionMode;
+      targetWeightKg?: number;
+      leftWeightKg?: number;
+      rightWeightKg?: number;
       notes?: string;
     }>;
   }) =>
@@ -89,7 +105,19 @@ export const api = {
   createSession: (body: {
     title: string;
     templateId?: string;
-    exercises?: Array<{ exerciseId: string; position: number; notes?: string }>;
+    exercises?: Array<{
+      exerciseId: string;
+      position: number;
+      targetSets?: number;
+      targetReps?: number;
+      targetDurationSec?: number;
+      restSeconds?: number;
+      executionMode?: ExecutionMode;
+      targetWeightKg?: number;
+      leftWeightKg?: number;
+      rightWeightKg?: number;
+      notes?: string;
+    }>;
   }) =>
     request<WorkoutSession>("/workouts/sessions", {
       method: "POST",
@@ -104,6 +132,7 @@ export const api = {
     sessionExerciseId: string,
     body: {
       setNumber: number;
+      side?: ExerciseSide;
       reps?: number;
       weightKg?: number;
       durationSec?: number;

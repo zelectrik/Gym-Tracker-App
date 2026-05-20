@@ -13,16 +13,28 @@ enum UserRole {
 
 enum MuscleGroup {
   CHEST
+  UPPER_CHEST
   BACK
+  LATS
+  TRAPS
   SHOULDERS
+  FRONT_SHOULDERS
+  REAR_SHOULDERS
   BICEPS
   TRICEPS
-  LEGS
-  GLUTES
+  FOREARMS
   ABS
+  OBLIQUES
+  LOWER_BACK
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  ADDUCTORS
+  ABDUCTORS
   CARDIO
+  CORE
   FULL_BODY
-  OTHER
 }
 
 enum WorkoutStatus {
@@ -30,6 +42,17 @@ enum WorkoutStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum ExerciseSide {
+  BOTH
+  LEFT
+  RIGHT
+}
+
+enum ExecutionMode {
+  BILATERAL
+  LEFT_RIGHT
 }
 
 model User {
@@ -50,6 +73,8 @@ model Exercise {
   id          String      @id @default(uuid())
   name        String      @unique
   muscleGroup MuscleGroup
+  type        String      @default("machine")
+  muscles     String[]    @default([])
   description String?
 
   createdAt DateTime @default(now())
@@ -84,6 +109,10 @@ model TemplateExercise {
   targetReps        Int?
   targetDurationSec Int?
   restSeconds       Int?
+  executionMode     ExecutionMode @default(BILATERAL)
+  targetWeightKg    Float?
+  leftWeightKg      Float?
+  rightWeightKg     Float?
   notes             String?
 
   workoutTemplate WorkoutTemplate @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
@@ -127,11 +156,19 @@ model WorkoutParticipant {
 }
 
 model SessionExercise {
-  id        String @id @default(uuid())
-  sessionId String
-  exerciseId String
-  position  Int
-  notes     String?
+  id                String @id @default(uuid())
+  sessionId         String
+  exerciseId        String
+  position          Int
+  targetSets        Int?
+  targetReps        Int?
+  targetDurationSec Int?
+  restSeconds       Int?
+  executionMode     ExecutionMode @default(BILATERAL)
+  targetWeightKg    Float?
+  leftWeightKg      Float?
+  rightWeightKg     Float?
+  notes             String?
 
   session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise       @relation(fields: [exerciseId], references: [id])
@@ -142,19 +179,20 @@ model SessionExercise {
 }
 
 model ExerciseSet {
-  id                String @id @default(uuid())
+  id                String       @id @default(uuid())
   sessionExerciseId String
   setNumber         Int
+  side              ExerciseSide @default(BOTH)
   reps              Int?
   weightKg          Float?
   durationSec       Int?
   distanceMeters    Int?
-  completed         Boolean @default(false)
+  completed         Boolean      @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionExerciseId, setNumber])
+  @@unique([sessionExerciseId, setNumber, side])
 }
