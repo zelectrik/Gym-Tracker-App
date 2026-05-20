@@ -1,6 +1,7 @@
 import type {
   Exercise,
   ExerciseSide,
+  ExecutionMode,
   MuscleGroup,
   Progress,
   User,
@@ -81,6 +82,10 @@ export const api = {
       targetSets: number;
       targetReps?: number;
       restSeconds?: number;
+      executionMode?: ExecutionMode;
+      targetWeightKg?: number;
+      leftWeightKg?: number;
+      rightWeightKg?: number;
       notes?: string;
     }>;
   }) =>
@@ -92,7 +97,18 @@ export const api = {
   createSession: (body: {
     title: string;
     templateId?: string;
-    exercises?: Array<{ exerciseId: string; position: number; notes?: string }>;
+    exercises?: Array<{
+      exerciseId: string;
+      position: number;
+      targetSets?: number;
+      targetReps?: number;
+      restSeconds?: number;
+      executionMode?: ExecutionMode;
+      targetWeightKg?: number;
+      leftWeightKg?: number;
+      rightWeightKg?: number;
+      notes?: string;
+    }>;
   }) =>
     request<WorkoutSession>("/workouts/sessions", {
       method: "POST",

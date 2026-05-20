@@ -3,6 +3,7 @@ import { api, authStore } from "./api";
 import type {
   Exercise,
   ExerciseSide,
+  ExecutionMode,
   MuscleGroup,
   Progress,
   SessionExercise,
@@ -30,6 +31,22 @@ const sideLabels: Record<ExerciseSide, string> = {
   BOTH: "bilatéral",
   LEFT: "gauche",
   RIGHT: "droite",
+};
+
+const modeLabels: Record<ExecutionMode, string> = {
+  BILATERAL: "bilatéral",
+  LEFT_RIGHT: "gauche puis droite",
+};
+
+type PlannedExerciseDraft = {
+  exerciseId: string;
+  targetSets: number;
+  targetReps: number;
+  executionMode: ExecutionMode;
+  targetWeightKg: number;
+  leftWeightKg: number;
+  rightWeightKg: number;
+  restSeconds: number;
 };
 
 export default function App() {
@@ -93,8 +110,8 @@ function AuthScreen({ onAuth }: { onAuth: (user: User) => void }) {
         <span className="pill">Gym Tracker</span>
         <h1>Connecte-toi pour créer, lancer et suivre tes entraînements.</h1>
         <p>
-          Templates, séances rapides, séries, reps, charge, gauche/droite et
-          progression.
+          Plans d'entraînement, séries préremplies, gauche/droite, charges,
+          historique et progression.
         </p>
       </section>
       <form className="card auth-card" onSubmit={submit}>
@@ -117,30 +134,16 @@ function AuthScreen({ onAuth }: { onAuth: (user: User) => void }) {
         {mode === "register" && (
           <label>
             Nom affiché
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-            />
+            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
           </label>
         )}
         <label>
           Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
           Mot de passe
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         {error && <p className="error">{error}</p>}
         <button className="primary">
@@ -166,17 +169,11 @@ function Shell({ user, onLogout }: { user: User; onLogout: () => void }) {
           </span>
         </div>
         <nav>
-          <button
-            className={page === "user" ? "active" : ""}
-            onClick={() => setPage("user")}
-          >
+          <button className={page === "user" ? "active" : ""} onClick={() => setPage("user")}>
             Dashboard user
           </button>
           {user.role === "SUPER_ADMIN" && (
-            <button
-              className={page === "admin" ? "active" : ""}
-              onClick={() => setPage("admin")}
-            >
+            <button className={page === "admin" ? "active" : ""} onClick={() => setPage("admin")}>
               Super admin
             </button>
           )}
@@ -206,11 +203,7 @@ function AdminDashboard() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
-    await api.createExercise({
-      name,
-      muscleGroup,
-      description: description || undefined,
-    });
+    await api.createExercise({ name, muscleGroup, description: description || undefined });
     setName("");
     setDescription("");
     setMessage("Exercice ajouté dans la base générale.");
@@ -221,10 +214,7 @@ function AdminDashboard() {
     <main className="layout">
       <section className="card">
         <h2>Super admin</h2>
-        <p>
-          Ajout des types d’exercices globaux utilisés par tous les
-          utilisateurs.
-        </p>
+        <p>Ajout des types d’exercices globaux utilisés par tous les utilisateurs.</p>
         <div className="stat">
           <b>{exercises.length}</b>
           <span>exercices en base</span>
@@ -235,19 +225,11 @@ function AdminDashboard() {
         <form onSubmit={add} className="grid-form">
           <label>
             Nom
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="presse à cuisses"
-            />
+            <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="presse à cuisses" />
           </label>
           <label>
             Groupe musculaire
-            <select
-              value={muscleGroup}
-              onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
-            >
+            <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}>
               {muscleGroups.map((g) => (
                 <option key={g}>{g}</option>
               ))}
@@ -255,10 +237,7 @@ function AdminDashboard() {
           </label>
           <label className="wide">
             Description
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <button className="primary">Ajouter</button>
           {message && <p className="success">{message}</p>}
@@ -294,15 +273,7 @@ function UserDashboard({ user }: { user: User }) {
   }, []);
 
   async function launch(template: WorkoutTemplate) {
-    const created = await api.createSession({
-      title: template.name,
-      templateId: template.id,
-      exercises: template.exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        position: e.position,
-        notes: e.notes ?? undefined,
-      })),
-    });
+    const created = await api.createSession({ title: template.name, templateId: template.id });
     await api.updateSessionStatus(created.id, "IN_PROGRESS");
     refresh();
   }
@@ -313,8 +284,7 @@ function UserDashboard({ user }: { user: User }) {
         <div>
           <h2>Dashboard de {user.displayName}</h2>
           <p>
-            Crée une séance rapide, lance un template, saisis tes séries et
-            termine la séance.
+            Crée un plan, lance une séance, choisis l’exercice dispo en salle et valide les lignes préremplies.
           </p>
         </div>
         {progress && (
@@ -338,28 +308,30 @@ function UserDashboard({ user }: { user: User }) {
       {active ? (
         <ActiveWorkout session={active} onRefresh={refresh} />
       ) : (
-        <>
-          <QuickWorkout exercises={exercises} onCreated={refresh} />
-          <CreateTemplate exercises={exercises} onCreated={refresh} />
-        </>
+        <CreateTemplate exercises={exercises} onCreated={refresh} />
       )}
 
       {!active && (
         <section className="card">
           <h3>Lancer un entraînement enregistré</h3>
           <div className="cards">
-            {templates.map((t) => (
-              <article className="mini-card" key={t.id}>
-                <h4>{t.name}</h4>
-                <p>{t.exercises.length} exercices</p>
-                <button className="primary" onClick={() => launch(t)}>
+            {templates.map((template) => (
+              <article className="mini-card" key={template.id}>
+                <h4>{template.name}</h4>
+                <p>{template.exercises.length} exercices planifiés</p>
+                <ul className="template-summary">
+                  {template.exercises.slice(0, 4).map((item) => (
+                    <li key={item.id}>
+                      {item.position}. {item.exercise.name} · {item.targetSets}×{item.targetReps ?? "?"} · {modeLabels[item.executionMode]}
+                    </li>
+                  ))}
+                </ul>
+                <button className="primary" onClick={() => launch(template)}>
                   Lancer
                 </button>
               </article>
             ))}
-            {templates.length === 0 && (
-              <p>Aucun entraînement enregistré pour le moment.</p>
-            )}
+            {templates.length === 0 && <p>Aucun entraînement enregistré pour le moment.</p>}
           </div>
         </section>
       )}
@@ -382,52 +354,67 @@ function UserDashboard({ user }: { user: User }) {
   );
 }
 
-function QuickWorkout({
-  exercises,
-  onCreated,
-}: {
-  exercises: Exercise[];
-  onCreated: () => void;
-}) {
-  const [title, setTitle] = useState("Séance rapide");
-  const [selected, setSelected] = useState<string[]>([]);
-  const available = exercises.filter((exercise) => !selected.includes(exercise.id));
+function CreateTemplate({ exercises, onCreated }: { exercises: Exercise[]; onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [selected, setSelected] = useState<PlannedExerciseDraft[]>([]);
+  const available = exercises.filter((exercise) => !selected.some((item) => item.exerciseId === exercise.id));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const created = await api.createSession({
-      title,
-      exercises: selected.map((exerciseId, index) => ({
-        exerciseId,
+    await api.createTemplate({
+      name,
+      exercises: selected.map((item, index) => ({
+        exerciseId: item.exerciseId,
         position: index + 1,
+        targetSets: item.targetSets,
+        targetReps: item.targetReps,
+        restSeconds: item.restSeconds,
+        executionMode: item.executionMode,
+        targetWeightKg: item.executionMode === "BILATERAL" ? item.targetWeightKg : undefined,
+        leftWeightKg: item.executionMode === "LEFT_RIGHT" ? item.leftWeightKg : undefined,
+        rightWeightKg: item.executionMode === "LEFT_RIGHT" ? item.rightWeightKg : undefined,
       })),
     });
-    await api.updateSessionStatus(created.id, "IN_PROGRESS");
-    setTitle("Séance rapide");
+    setName("");
     setSelected([]);
     onCreated();
   }
 
   return (
-    <section className="card quick-card">
-      <div>
-        <span className="pill">MVP rapide</span>
-        <h3>Créer une séance rapide</h3>
-        <p>
-          Choisis quelques exercices et lance directement la séance, sans créer
-          de template.
-        </p>
+    <section className="card">
+      <div className="section-title">
+        <div>
+          <span className="pill">V1 MVP</span>
+          <h3>Créer un entraînement planifié</h3>
+          <p>
+            Définis les exercices, séries, reps, charges et le mode bilatéral ou gauche/droite. L’ordre reste indicatif : pendant la séance tu choisis l’exercice disponible.
+          </p>
+        </div>
       </div>
-      <form onSubmit={submit} className="quick-form">
+      <form onSubmit={submit} className="template-builder">
         <label>
-          Nom
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+          Nom de l'entraînement
+          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Jambes reprise genou" />
         </label>
         <label>
           Ajouter un exercice
           <select
             onChange={(e) => {
-              if (e.target.value) setSelected([...selected, e.target.value]);
+              if (e.target.value) {
+                setSelected([
+                  ...selected,
+                  {
+                    exerciseId: e.target.value,
+                    targetSets: 3,
+                    targetReps: 10,
+                    executionMode: "BILATERAL",
+                    targetWeightKg: 0,
+                    leftWeightKg: 0,
+                    rightWeightKg: 0,
+                    restSeconds: 90,
+                  },
+                ]);
+              }
               e.currentTarget.value = "";
             }}
           >
@@ -439,164 +426,86 @@ function QuickWorkout({
             ))}
           </select>
         </label>
-        <div className="selected-chips">
-          {selected.map((exerciseId, index) => {
-            const exercise = exercises.find((item) => item.id === exerciseId);
+
+        <div className="planned-exercises">
+          {selected.map((item, index) => {
+            const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
             return (
-              <button
-                type="button"
-                key={exerciseId}
-                onClick={() => setSelected(selected.filter((id) => id !== exerciseId))}
-              >
-                {index + 1}. {exercise?.name} ✕
-              </button>
+              <article className="planned-line" key={item.exerciseId}>
+                <div className="planned-title">
+                  <b>
+                    {index + 1}. {exercise?.name}
+                  </b>
+                  <button type="button" onClick={() => setSelected(selected.filter((candidate) => candidate.exerciseId !== item.exerciseId))}>
+                    Retirer
+                  </button>
+                </div>
+                <div className="planned-grid">
+                  <label>
+                    Séries
+                    <input type="number" min="1" value={item.targetSets} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { targetSets: Number(e.target.value) })} />
+                  </label>
+                  <label>
+                    Reps
+                    <input type="number" min="1" value={item.targetReps} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { targetReps: Number(e.target.value) })} />
+                  </label>
+                  <label>
+                    Mode
+                    <select value={item.executionMode} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { executionMode: e.target.value as ExecutionMode })}>
+                      <option value="BILATERAL">bilatéral</option>
+                      <option value="LEFT_RIGHT">gauche puis droite</option>
+                    </select>
+                  </label>
+                  {item.executionMode === "BILATERAL" ? (
+                    <label>
+                      Poids kg
+                      <input type="number" min="0" step="0.5" value={item.targetWeightKg} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { targetWeightKg: Number(e.target.value) })} />
+                    </label>
+                  ) : (
+                    <>
+                      <label>
+                        Poids gauche kg
+                        <input type="number" min="0" step="0.5" value={item.leftWeightKg} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { leftWeightKg: Number(e.target.value) })} />
+                      </label>
+                      <label>
+                        Poids droite kg
+                        <input type="number" min="0" step="0.5" value={item.rightWeightKg} onChange={(e) => updateDraft(selected, setSelected, item.exerciseId, { rightWeightKg: Number(e.target.value) })} />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </article>
             );
           })}
         </div>
+
         <button className="primary large-action" disabled={!selected.length}>
-          Lancer la séance maintenant
+          Enregistrer l'entraînement
         </button>
       </form>
     </section>
   );
 }
 
-function CreateTemplate({
-  exercises,
-  onCreated,
-}: {
-  exercises: Exercise[];
-  onCreated: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [selected, setSelected] = useState<
-    Array<{
-      exerciseId: string;
-      targetSets: number;
-      targetReps: number;
-      restSeconds: number;
-    }>
-  >([]);
-  const available = exercises.filter(
-    (e) => !selected.some((s) => s.exerciseId === e.id),
-  );
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    await api.createTemplate({
-      name,
-      exercises: selected.map((s, index) => ({ ...s, position: index + 1 })),
-    });
-    setName("");
-    setSelected([]);
-    onCreated();
-  }
-
-  return (
-    <details className="card details-card">
-      <summary>Créer un entraînement enregistré</summary>
-      <form onSubmit={submit}>
-        <label>
-          Nom de l'entraînement
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="Jambes reprise genou"
-          />
-        </label>
-        <div className="exercise-picker">
-          <select
-            onChange={(e) => {
-              if (e.target.value) {
-                setSelected([
-                  ...selected,
-                  {
-                    exerciseId: e.target.value,
-                    targetSets: 3,
-                    targetReps: 10,
-                    restSeconds: 90,
-                  },
-                ]);
-              }
-              e.currentTarget.value = "";
-            }}
-          >
-            <option value="">Ajouter un exercice...</option>
-            {available.map((ex) => (
-              <option key={ex.id} value={ex.id}>
-                {ex.name} · {ex.muscleGroup}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="template-lines">
-          {selected.map((item, index) => {
-            const ex = exercises.find((e) => e.id === item.exerciseId);
-            return (
-              <div className="line" key={item.exerciseId}>
-                <b>
-                  {index + 1}. {ex?.name}
-                </b>
-                <input
-                  type="number"
-                  min="1"
-                  value={item.targetSets}
-                  aria-label="Nombre de séries"
-                  onChange={(e) =>
-                    setSelected(
-                      selected.map((s) =>
-                        s.exerciseId === item.exerciseId
-                          ? { ...s, targetSets: Number(e.target.value) }
-                          : s,
-                      ),
-                    )
-                  }
-                />
-                <input
-                  type="number"
-                  min="1"
-                  value={item.targetReps}
-                  aria-label="Nombre de répétitions"
-                  onChange={(e) =>
-                    setSelected(
-                      selected.map((s) =>
-                        s.exerciseId === item.exerciseId
-                          ? { ...s, targetReps: Number(e.target.value) }
-                          : s,
-                      ),
-                    )
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelected(
-                      selected.filter((s) => s.exerciseId !== item.exerciseId),
-                    )
-                  }
-                >
-                  Retirer
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <button className="primary" disabled={!selected.length}>
-          Enregistrer l'entraînement
-        </button>
-      </form>
-    </details>
-  );
+function updateDraft(
+  selected: PlannedExerciseDraft[],
+  setSelected: React.Dispatch<React.SetStateAction<PlannedExerciseDraft[]>>,
+  exerciseId: string,
+  patch: Partial<PlannedExerciseDraft>,
+) {
+  setSelected(selected.map((item) => (item.exerciseId === exerciseId ? { ...item, ...patch } : item)));
 }
 
-function ActiveWorkout({
-  session,
-  onRefresh,
-}: {
-  session: WorkoutSession;
-  onRefresh: () => void;
-}) {
+function ActiveWorkout({ session, onRefresh }: { session: WorkoutSession; onRefresh: () => void }) {
+  const [selectedExerciseId, setSelectedExerciseId] = useState(session.exercises[0]?.id ?? "");
+  const selectedExercise = session.exercises.find((exercise) => exercise.id === selectedExerciseId) ?? session.exercises[0];
+
+  useEffect(() => {
+    if (!session.exercises.some((exercise) => exercise.id === selectedExerciseId)) {
+      setSelectedExerciseId(session.exercises[0]?.id ?? "");
+    }
+  }, [session.exercises, selectedExerciseId]);
+
   async function finish() {
     await api.updateSessionStatus(session.id, "COMPLETED");
     onRefresh();
@@ -608,104 +517,116 @@ function ActiveWorkout({
         <div>
           <span className="pill">Séance en cours</span>
           <h3>{session.title}</h3>
-          <p>Renseigne reps, charge et côté gauche/droite si nécessaire.</p>
+          <p>Choisis l’exercice disponible en salle, puis valide les lignes préremplies.</p>
         </div>
         <button className="primary finish-button" onClick={finish}>
           Terminer
         </button>
       </div>
-      {session.exercises.map((exercise) => (
-        <ExerciseLogger
-          key={exercise.id}
-          exercise={exercise}
-          onRefresh={onRefresh}
-        />
-      ))}
+
+      <div className="exercise-switcher">
+        {session.exercises.map((exercise) => {
+          const total = exercise.sets.length;
+          const done = exercise.sets.filter((set) => set.completed).length;
+          return (
+            <button
+              type="button"
+              key={exercise.id}
+              className={exercise.id === selectedExercise?.id ? "active" : ""}
+              onClick={() => setSelectedExerciseId(exercise.id)}
+            >
+              {exercise.position}. {exercise.exercise.name}
+              <span>{done}/{total}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedExercise && <ExerciseTable exercise={selectedExercise} onRefresh={onRefresh} />}
     </section>
   );
 }
 
-function ExerciseLogger({
-  exercise,
-  onRefresh,
-}: {
-  exercise: SessionExercise;
-  onRefresh: () => void;
-}) {
-  const [reps, setReps] = useState(10);
-  const [weightKg, setWeightKg] = useState(0);
-  const [side, setSide] = useState<ExerciseSide>("BOTH");
-  const nextSet = useMemo(() => {
-    const setsForSide = exercise.sets.filter((set) => set.side === side);
-    return (setsForSide.at(-1)?.setNumber ?? 0) + 1;
-  }, [exercise.sets, side]);
-  const lastSet = exercise.sets.at(-1);
-
-  async function addSet(e: React.FormEvent) {
-    e.preventDefault();
-    await api.addSet(exercise.id, {
-      setNumber: nextSet,
-      side,
-      reps,
-      weightKg,
-      completed: true,
-    });
-    onRefresh();
-  }
+function ExerciseTable({ exercise, onRefresh }: { exercise: SessionExercise; onRefresh: () => void }) {
+  const orderedSets = [...exercise.sets].sort((a, b) => a.setNumber - b.setNumber || sideOrder(a.side) - sideOrder(b.side));
+  const completedCount = orderedSets.filter((set) => set.completed).length;
 
   return (
     <article className="logger">
       <div className="logger-head">
         <div>
           <h4>{exercise.exercise.name}</h4>
-          {lastSet && (
-            <p>
-              Dernière série : {sideLabels[lastSet.side]} · {lastSet.reps ?? 0} reps · {lastSet.weightKg ?? 0} kg
-            </p>
-          )}
+          <p>
+            {exercise.targetSets ?? orderedSets.length} séries · {exercise.targetReps ?? "?"} reps · {modeLabels[exercise.executionMode]}
+          </p>
         </div>
+        <span className="progress-pill">{completedCount}/{orderedSets.length} validées</span>
       </div>
-      <div className="sets">
-        {exercise.sets.map((set) => (
-          <span key={set.id}>
-            S{set.setNumber} {sideLabels[set.side]} : {set.reps ?? 0} reps · {set.weightKg ?? 0} kg
-          </span>
+      <div className="set-table">
+        <div className="set-row set-row-head">
+          <span>Série</span>
+          <span>Type</span>
+          <span>Reps</span>
+          <span>Poids</span>
+          <span>Action</span>
+        </div>
+        {orderedSets.map((set) => (
+          <SetRow key={set.id} set={set} sessionExerciseId={exercise.id} onRefresh={onRefresh} />
         ))}
       </div>
-      <form onSubmit={addSet} className="set-form">
-        <label>
-          Reps
-          <input
-            type="number"
-            min="1"
-            inputMode="numeric"
-            value={reps}
-            onChange={(e) => setReps(Number(e.target.value))}
-          />
-        </label>
-        <label>
-          Charge kg
-          <input
-            type="number"
-            min="0"
-            step="0.5"
-            inputMode="decimal"
-            value={weightKg}
-            onChange={(e) => setWeightKg(Number(e.target.value))}
-          />
-        </label>
-        <label>
-          Côté
-          <select value={side} onChange={(e) => setSide(e.target.value as ExerciseSide)}>
-            <option value="BOTH">bilatéral</option>
-            <option value="LEFT">gauche</option>
-            <option value="RIGHT">droite</option>
-          </select>
-        </label>
-        <button className="large-action">Valider S{nextSet}</button>
-      </form>
     </article>
   );
+}
+
+function SetRow({
+  set,
+  sessionExerciseId,
+  onRefresh,
+}: {
+  set: { setNumber: number; side: ExerciseSide; reps?: number | null; weightKg?: number | null; completed?: boolean };
+  sessionExerciseId: string;
+  onRefresh: () => void;
+}) {
+  const [reps, setReps] = useState(set.reps ?? 0);
+  const [weightKg, setWeightKg] = useState(set.weightKg ?? 0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setReps(set.reps ?? 0);
+    setWeightKg(set.weightKg ?? 0);
+  }, [set.reps, set.weightKg]);
+
+  async function validate() {
+    setSaving(true);
+    try {
+      await api.addSet(sessionExerciseId, {
+        setNumber: set.setNumber,
+        side: set.side,
+        reps,
+        weightKg,
+        completed: true,
+      });
+      onRefresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={`set-row ${set.completed ? "completed" : ""}`}>
+      <span className="set-number">{set.setNumber}</span>
+      <span>{sideLabels[set.side]}</span>
+      <input type="number" min="0" inputMode="numeric" value={reps} onChange={(e) => setReps(Number(e.target.value))} />
+      <input type="number" min="0" step="0.5" inputMode="decimal" value={weightKg} onChange={(e) => setWeightKg(Number(e.target.value))} />
+      <button className={set.completed ? "validated" : "primary"} onClick={validate} disabled={saving}>
+        {set.completed ? "Validée" : "Valider"}
+      </button>
+    </div>
+  );
+}
+
+function sideOrder(side: ExerciseSide) {
+  return side === "BOTH" ? 0 : side === "LEFT" ? 1 : 2;
 }
 
 function ExerciseList({ exercises }: { exercises: Exercise[] }) {
