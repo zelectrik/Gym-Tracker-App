@@ -13,16 +13,28 @@ enum UserRole {
 
 enum MuscleGroup {
   CHEST
+  UPPER_CHEST
   BACK
+  LATS
+  TRAPS
   SHOULDERS
+  FRONT_SHOULDERS
+  REAR_SHOULDERS
   BICEPS
   TRICEPS
-  LEGS
-  GLUTES
+  FOREARMS
   ABS
+  OBLIQUES
+  LOWER_BACK
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  ADDUCTORS
+  ABDUCTORS
   CARDIO
+  CORE
   FULL_BODY
-  OTHER
 }
 
 enum WorkoutStatus {
@@ -61,6 +73,8 @@ model Exercise {
   id          String      @id @default(uuid())
   name        String      @unique
   muscleGroup MuscleGroup
+  type        String      @default("machine")
+  muscles     String[]    @default([])
   description String?
 
   createdAt DateTime @default(now())

@@ -21,7 +21,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "seed:exercises": "dotenv -e .env -- tsx scripts/seed-exercises.ts"
   },
   "keywords": [],
   "author": "",

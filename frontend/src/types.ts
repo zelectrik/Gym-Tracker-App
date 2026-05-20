@@ -1,11 +1,13 @@
 export type UserRole = "USER" | "SUPER_ADMIN";
 export type WorkoutStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type MuscleGroup = "CHEST" | "BACK" | "SHOULDERS" | "BICEPS" | "TRICEPS" | "LEGS" | "GLUTES" | "ABS" | "CARDIO" | "FULL_BODY" | "OTHER";
+export type MuscleTag = "pectoraux" | "haut_pectoraux" | "dos" | "grand_dorsal" | "trapèzes" | "épaules" | "avant_epaules" | "arriere_epaules" | "biceps" | "triceps" | "avant_bras" | "abdominaux" | "obliques" | "lombaires" | "quadriceps" | "ischios" | "fessiers" | "mollets" | "adducteurs" | "abducteurs" | "cardio" | "core" | "full_body";
+export type ExerciseType = "machine" | "dumbbell" | "barbell" | "cable" | "bodyweight" | "cardio";
 export type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
 export type ExecutionMode = "BILATERAL" | "LEFT_RIGHT";
 
 export type User = { id: string; email: string; displayName: string; role: UserRole };
-export type Exercise = { id: string; name: string; muscleGroup: MuscleGroup; description?: string | null; createdAt?: string; updatedAt?: string };
+export type Exercise = { id: string; name: string; muscleGroup: MuscleGroup; type: ExerciseType; muscles: MuscleTag[]; description?: string | null; createdAt?: string; updatedAt?: string };
 export type TemplateExercise = {
   id: string;
   exerciseId: string;
