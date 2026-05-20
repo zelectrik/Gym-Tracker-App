@@ -32,6 +32,12 @@ enum WorkoutStatus {
   CANCELLED
 }
 
+enum ExerciseSide {
+  BOTH
+  LEFT
+  RIGHT
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -142,19 +148,20 @@ model SessionExercise {
 }
 
 model ExerciseSet {
-  id                String @id @default(uuid())
+  id                String       @id @default(uuid())
   sessionExerciseId String
   setNumber         Int
+  side              ExerciseSide @default(BOTH)
   reps              Int?
   weightKg          Float?
   durationSec       Int?
   distanceMeters    Int?
-  completed         Boolean @default(false)
+  completed         Boolean      @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionExerciseId, setNumber])
+  @@unique([sessionExerciseId, setNumber, side])
 }

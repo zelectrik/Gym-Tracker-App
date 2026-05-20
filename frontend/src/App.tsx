@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api, authStore } from "./api";
 import type {
   Exercise,
+  ExerciseSide,
   MuscleGroup,
   Progress,
   SessionExercise,
@@ -25,6 +26,12 @@ const muscleGroups: MuscleGroup[] = [
   "OTHER",
 ];
 
+const sideLabels: Record<ExerciseSide, string> = {
+  BOTH: "bilatéral",
+  LEFT: "gauche",
+  RIGHT: "droite",
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,13 +44,16 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
       <main className="center">
         <div className="card">Chargement...</div>
       </main>
     );
+  }
+
   if (!user) return <AuthScreen onAuth={setUser} />;
+
   return (
     <Shell
       user={user}
@@ -66,8 +76,9 @@ function AuthScreen({ onAuth }: { onAuth: (user: User) => void }) {
     e.preventDefault();
     setError("");
     try {
-      if (mode === "register")
+      if (mode === "register") {
         await api.register({ email, password, displayName });
+      }
       const result = await api.login({ email, password });
       authStore.setToken(result.token);
       onAuth(result.user);
@@ -82,8 +93,8 @@ function AuthScreen({ onAuth }: { onAuth: (user: User) => void }) {
         <span className="pill">Gym Tracker</span>
         <h1>Connecte-toi pour créer, lancer et suivre tes entraînements.</h1>
         <p>
-          Templates, séances en cours, séries, reps, charge, progression et
-          dashboard admin.
+          Templates, séances rapides, séries, reps, charge, gauche/droite et
+          progression.
         </p>
       </section>
       <form className="card auth-card" onSubmit={submit}>
@@ -144,6 +155,7 @@ function Shell({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [page, setPage] = useState<"user" | "admin">(
     user.role === "SUPER_ADMIN" ? "admin" : "user",
   );
+
   return (
     <>
       <header className="topbar">
@@ -186,6 +198,7 @@ function AdminDashboard() {
   async function refresh() {
     setExercises(await api.exercises());
   }
+
   useEffect(() => {
     refresh();
   }, []);
@@ -211,10 +224,6 @@ function AdminDashboard() {
         <p>
           Ajout des types d’exercices globaux utilisés par tous les
           utilisateurs.
-        </p>
-        <p className="notice">
-          Le backend actuel n’a pas encore de route “liste utilisateurs / nombre
-          d’inscrits”. L’emplacement est prévu côté interface.
         </p>
         <div className="stat">
           <b>{exercises.length}</b>
@@ -279,6 +288,7 @@ function UserDashboard({ user }: { user: User }) {
     setSessions(ses);
     setProgress(prog);
   }
+
   useEffect(() => {
     refresh();
   }, []);
@@ -303,7 +313,7 @@ function UserDashboard({ user }: { user: User }) {
         <div>
           <h2>Dashboard de {user.displayName}</h2>
           <p>
-            Crée tes entraînements, lance une séance, saisis tes séries et
+            Crée une séance rapide, lance un template, saisis tes séries et
             termine la séance.
           </p>
         </div>
@@ -324,14 +334,19 @@ function UserDashboard({ user }: { user: User }) {
           </div>
         )}
       </section>
+
       {active ? (
         <ActiveWorkout session={active} onRefresh={refresh} />
       ) : (
-        <CreateTemplate exercises={exercises} onCreated={refresh} />
+        <>
+          <QuickWorkout exercises={exercises} onCreated={refresh} />
+          <CreateTemplate exercises={exercises} onCreated={refresh} />
+        </>
       )}
+
       {!active && (
         <section className="card">
-          <h3>Lancer un entraînement</h3>
+          <h3>Lancer un entraînement enregistré</h3>
           <div className="cards">
             {templates.map((t) => (
               <article className="mini-card" key={t.id}>
@@ -343,11 +358,12 @@ function UserDashboard({ user }: { user: User }) {
               </article>
             ))}
             {templates.length === 0 && (
-              <p>Aucun entraînement créé pour le moment.</p>
+              <p>Aucun entraînement enregistré pour le moment.</p>
             )}
           </div>
         </section>
       )}
+
       <section className="card">
         <h3>Historique</h3>
         <div className="history">
@@ -359,9 +375,89 @@ function UserDashboard({ user }: { user: User }) {
               </span>
             </div>
           ))}
+          {sessions.length === 0 && <p>Aucune séance pour le moment.</p>}
         </div>
       </section>
     </main>
+  );
+}
+
+function QuickWorkout({
+  exercises,
+  onCreated,
+}: {
+  exercises: Exercise[];
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("Séance rapide");
+  const [selected, setSelected] = useState<string[]>([]);
+  const available = exercises.filter((exercise) => !selected.includes(exercise.id));
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const created = await api.createSession({
+      title,
+      exercises: selected.map((exerciseId, index) => ({
+        exerciseId,
+        position: index + 1,
+      })),
+    });
+    await api.updateSessionStatus(created.id, "IN_PROGRESS");
+    setTitle("Séance rapide");
+    setSelected([]);
+    onCreated();
+  }
+
+  return (
+    <section className="card quick-card">
+      <div>
+        <span className="pill">MVP rapide</span>
+        <h3>Créer une séance rapide</h3>
+        <p>
+          Choisis quelques exercices et lance directement la séance, sans créer
+          de template.
+        </p>
+      </div>
+      <form onSubmit={submit} className="quick-form">
+        <label>
+          Nom
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+        </label>
+        <label>
+          Ajouter un exercice
+          <select
+            onChange={(e) => {
+              if (e.target.value) setSelected([...selected, e.target.value]);
+              e.currentTarget.value = "";
+            }}
+          >
+            <option value="">Sélectionner...</option>
+            {available.map((exercise) => (
+              <option key={exercise.id} value={exercise.id}>
+                {exercise.name} · {exercise.muscleGroup}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="selected-chips">
+          {selected.map((exerciseId, index) => {
+            const exercise = exercises.find((item) => item.id === exerciseId);
+            return (
+              <button
+                type="button"
+                key={exerciseId}
+                onClick={() => setSelected(selected.filter((id) => id !== exerciseId))}
+              >
+                {index + 1}. {exercise?.name} ✕
+              </button>
+            );
+          })}
+        </div>
+        <button className="primary large-action" disabled={!selected.length}>
+          Lancer la séance maintenant
+        </button>
+      </form>
+    </section>
   );
 }
 
@@ -397,8 +493,8 @@ function CreateTemplate({
   }
 
   return (
-    <section className="card">
-      <h3>Créer un nouvel entraînement</h3>
+    <details className="card details-card">
+      <summary>Créer un entraînement enregistré</summary>
       <form onSubmit={submit}>
         <label>
           Nom de l'entraînement
@@ -412,7 +508,7 @@ function CreateTemplate({
         <div className="exercise-picker">
           <select
             onChange={(e) => {
-              if (e.target.value)
+              if (e.target.value) {
                 setSelected([
                   ...selected,
                   {
@@ -422,6 +518,7 @@ function CreateTemplate({
                     restSeconds: 90,
                   },
                 ]);
+              }
               e.currentTarget.value = "";
             }}
           >
@@ -445,6 +542,7 @@ function CreateTemplate({
                   type="number"
                   min="1"
                   value={item.targetSets}
+                  aria-label="Nombre de séries"
                   onChange={(e) =>
                     setSelected(
                       selected.map((s) =>
@@ -459,6 +557,7 @@ function CreateTemplate({
                   type="number"
                   min="1"
                   value={item.targetReps}
+                  aria-label="Nombre de répétitions"
                   onChange={(e) =>
                     setSelected(
                       selected.map((s) =>
@@ -484,10 +583,10 @@ function CreateTemplate({
           })}
         </div>
         <button className="primary" disabled={!selected.length}>
-          Créer l'entraînement
+          Enregistrer l'entraînement
         </button>
       </form>
-    </section>
+    </details>
   );
 }
 
@@ -502,18 +601,17 @@ function ActiveWorkout({
     await api.updateSessionStatus(session.id, "COMPLETED");
     onRefresh();
   }
+
   return (
     <section className="card active-workout">
-      <div className="section-title">
+      <div className="section-title sticky-workout-head">
         <div>
-          <h3>Séance en cours : {session.title}</h3>
-          <p>
-            Renseigne reps + charge à chaque série. La nuance gauche/droite est
-            préparée UX, mais le backend n’a pas encore les champs dédiés.
-          </p>
+          <span className="pill">Séance en cours</span>
+          <h3>{session.title}</h3>
+          <p>Renseigne reps, charge et côté gauche/droite si nécessaire.</p>
         </div>
-        <button className="primary" onClick={finish}>
-          Terminer l’entraînement
+        <button className="primary finish-button" onClick={finish}>
+          Terminer
         </button>
       </div>
       {session.exercises.map((exercise) => (
@@ -534,18 +632,20 @@ function ExerciseLogger({
   exercise: SessionExercise;
   onRefresh: () => void;
 }) {
-  const nextSet = useMemo(
-    () => (exercise.sets.at(-1)?.setNumber ?? 0) + 1,
-    [exercise.sets],
-  );
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(0);
-  const [side, setSide] = useState("both");
+  const [side, setSide] = useState<ExerciseSide>("BOTH");
+  const nextSet = useMemo(() => {
+    const setsForSide = exercise.sets.filter((set) => set.side === side);
+    return (setsForSide.at(-1)?.setNumber ?? 0) + 1;
+  }, [exercise.sets, side]);
+  const lastSet = exercise.sets.at(-1);
 
   async function addSet(e: React.FormEvent) {
     e.preventDefault();
     await api.addSet(exercise.id, {
       setNumber: nextSet,
+      side,
       reps,
       weightKg,
       completed: true,
@@ -555,11 +655,20 @@ function ExerciseLogger({
 
   return (
     <article className="logger">
-      <h4>{exercise.exercise.name}</h4>
+      <div className="logger-head">
+        <div>
+          <h4>{exercise.exercise.name}</h4>
+          {lastSet && (
+            <p>
+              Dernière série : {sideLabels[lastSet.side]} · {lastSet.reps ?? 0} reps · {lastSet.weightKg ?? 0} kg
+            </p>
+          )}
+        </div>
+      </div>
       <div className="sets">
         {exercise.sets.map((set) => (
           <span key={set.id}>
-            S{set.setNumber}: {set.reps ?? 0} reps · {set.weightKg ?? 0} kg
+            S{set.setNumber} {sideLabels[set.side]} : {set.reps ?? 0} reps · {set.weightKg ?? 0} kg
           </span>
         ))}
       </div>
@@ -569,6 +678,7 @@ function ExerciseLogger({
           <input
             type="number"
             min="1"
+            inputMode="numeric"
             value={reps}
             onChange={(e) => setReps(Number(e.target.value))}
           />
@@ -579,19 +689,20 @@ function ExerciseLogger({
             type="number"
             min="0"
             step="0.5"
+            inputMode="decimal"
             value={weightKg}
             onChange={(e) => setWeightKg(Number(e.target.value))}
           />
         </label>
         <label>
           Côté
-          <select value={side} onChange={(e) => setSide(e.target.value)}>
-            <option value="both">bilatéral</option>
-            <option value="left">gauche</option>
-            <option value="right">droite</option>
+          <select value={side} onChange={(e) => setSide(e.target.value as ExerciseSide)}>
+            <option value="BOTH">bilatéral</option>
+            <option value="LEFT">gauche</option>
+            <option value="RIGHT">droite</option>
           </select>
         </label>
-        <button>Valider série {nextSet}</button>
+        <button className="large-action">Valider S{nextSet}</button>
       </form>
     </article>
   );

@@ -1,5 +1,6 @@
 import type {
   Exercise,
+  ExerciseSide,
   MuscleGroup,
   Progress,
   User,
@@ -38,11 +39,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
-  if (!res.ok)
+  if (!res.ok) {
     throw new ApiError(
       res.status,
       typeof data?.error === "string" ? data.error : "Erreur API",
     );
+  }
+
   return data as T;
 }
 
@@ -104,6 +107,7 @@ export const api = {
     sessionExerciseId: string,
     body: {
       setNumber: number;
+      side?: ExerciseSide;
       reps?: number;
       weightKg?: number;
       durationSec?: number;
