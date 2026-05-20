@@ -579,3 +579,93 @@ code {
 .set-row.duration-row button {
   grid-column: 5;
 }
+
+
+/* ===== MOBILE UX IMPROVEMENTS ===== */
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .topbar nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .layout {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .exercise-switcher {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+
+  .exercise-switcher button {
+    min-width: 180px;
+    flex-shrink: 0;
+  }
+
+  .set-row,
+  .set-row.duration-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .set-row span,
+  .set-row input,
+  .set-row button {
+    width: 100%;
+  }
+
+  .set-row button {
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .logger {
+    overflow: hidden;
+  }
+
+  .sticky-workout-head {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: white;
+    padding-bottom: 12px;
+  }
+
+  .finish-button {
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .planned-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .stats div {
+    padding: 10px;
+  }
+
+  .template-summary {
+    padding-left: 18px;
+  }
+}
