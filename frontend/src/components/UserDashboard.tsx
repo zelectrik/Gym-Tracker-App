@@ -11,12 +11,14 @@ import { modeLabels } from "../utils/workoutLabels";
 import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
+import { ActiveWorkout } from "./ActiveWorkout";
 
 export function UserDashboard({ user }: { user: User }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [focusMode, setFocusMode] = useState(true);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
 
@@ -38,6 +40,17 @@ export function UserDashboard({ user }: { user: User }) {
     refresh();
   }, []);
 
+  if (active && focusMode) {
+    return (
+      <ActiveWorkout
+        session={active}
+        onRefresh={refresh}
+        onExitFocus={() => setFocusMode(false)}
+        isFocusMode
+      />
+    );
+  }
+
   async function launch(template: WorkoutTemplate) {
     const created = await api.createSession({
       title: template.name,
@@ -52,6 +65,15 @@ export function UserDashboard({ user }: { user: User }) {
   return (
     <main className="layout">
       <section className="card dashboard-head">
+        {active && (
+          <section className="card">
+            <h3>Séance en cours</h3>
+            <p>{active.title}</p>
+            <button className="primary" onClick={() => setFocusMode(true)}>
+              Reprendre en mode focus
+            </button>
+          </section>
+        )}
         <div>
           <h2>Dashboard de {user.displayName}</h2>
 
