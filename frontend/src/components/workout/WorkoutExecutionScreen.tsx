@@ -380,36 +380,84 @@ function ExerciseExecutionView({
 
   const totalSets = exercise.targetSets ?? getSetGroups(exercise).length;
 
-  useEffect(() => {
-    setBothReps(currentGroup.both?.reps ?? exercise.targetReps ?? 0);
-    setBothWeightKg(
-      currentGroup.both?.weightKg ?? exercise.targetWeightKg ?? 0,
-    );
-    setBothDurationSec(
-      currentGroup.both?.durationSec ?? exercise.targetDurationSec ?? 30,
+  function getPreviousCompletedSet(side: ExerciseSide) {
+    return exercise.sets
+      .filter(
+        (set) =>
+          set.completed &&
+          set.side === side &&
+          set.setNumber === currentGroup.setNumber - 1,
+      )
+      .at(-1);
+  }
+
+  function getDefaultForSet(side: ExerciseSide) {
+    const currentSet =
+      side === "LEFT"
+        ? currentGroup.left
+        : side === "RIGHT"
+          ? currentGroup.right
+          : currentGroup.both;
+
+    const previousSet = getPreviousCompletedSet(side);
+
+    const lastSet = findComparableLastSet(
+      lastPerformance,
+      currentGroup.setNumber,
+      side,
     );
 
-    setLeftReps(currentGroup.left?.reps ?? exercise.targetReps ?? 0);
-    setRightReps(currentGroup.right?.reps ?? exercise.targetReps ?? 0);
-    setLeftWeightKg(
-      currentGroup.left?.weightKg ??
-        exercise.leftWeightKg ??
-        exercise.targetWeightKg ??
-        0,
-    );
-    setRightWeightKg(
-      currentGroup.right?.weightKg ??
-        exercise.rightWeightKg ??
-        exercise.targetWeightKg ??
-        0,
-    );
-    setLeftDurationSec(
-      currentGroup.left?.durationSec ?? exercise.targetDurationSec ?? 30,
-    );
-    setRightDurationSec(
-      currentGroup.right?.durationSec ?? exercise.targetDurationSec ?? 30,
-    );
-  }, [currentGroup, exercise]);
+    const plannedValues = {
+      reps: currentSet?.reps ?? exercise.targetReps ?? 0,
+      weightKg: currentSet?.weightKg ?? defaultWeightForSet(exercise, side),
+      durationSec: currentSet?.durationSec ?? exercise.targetDurationSec ?? 30,
+    };
+
+    if (currentSet?.completed) {
+      return plannedValues;
+    }
+
+    if (previousSet) {
+      return {
+        reps: previousSet.reps ?? plannedValues.reps,
+        weightKg: previousSet.weightKg ?? plannedValues.weightKg,
+        durationSec: previousSet.durationSec ?? plannedValues.durationSec,
+      };
+    }
+
+    if (lastSet) {
+      return {
+        reps: lastSet.reps ?? plannedValues.reps,
+        weightKg: lastSet.weightKg ?? plannedValues.weightKg,
+        durationSec: lastSet.durationSec ?? plannedValues.durationSec,
+      };
+    }
+
+    return plannedValues;
+  }
+
+  useEffect(() => {
+    const both = getDefaultForSet("BOTH");
+    setBothReps(both.reps);
+    setBothWeightKg(both.weightKg);
+    setBothDurationSec(both.durationSec);
+
+    const left = getDefaultForSet("LEFT");
+    setLeftReps(left.reps);
+    setLeftWeightKg(left.weightKg);
+    setLeftDurationSec(left.durationSec);
+
+    const right = getDefaultForSet("RIGHT");
+    setRightReps(right.reps);
+    setRightWeightKg(right.weightKg);
+    setRightDurationSec(right.durationSec);
+  }, [
+    currentGroup.setNumber,
+    currentGroup.both?.id,
+    currentGroup.left?.id,
+    currentGroup.right?.id,
+    lastPerformance,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
