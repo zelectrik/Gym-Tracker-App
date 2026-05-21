@@ -170,3 +170,19 @@ export type ImportProgramResult = {
   importedCount: number;
   templates: WorkoutTemplate[];
 };
+
+export type LastExercisePerformance = {
+  exerciseId: string;
+  exerciseName: string;
+  sessionId: string;
+  sessionTitle: string;
+  completedAt: string;
+  sets: Array<{
+    setNumber: number;
+    side: ExerciseSide;
+    reps?: number | null;
+    weightKg?: number | null;
+    durationSec?: number | null;
+    distanceMeters?: number | null;
+  }>;
+};

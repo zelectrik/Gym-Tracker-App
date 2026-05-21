@@ -10,6 +10,7 @@ import type {
   WorkoutTemplate,
   ImportProgramPayload,
   ImportProgramResult,
+  LastExercisePerformance,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -113,6 +114,10 @@ export const api = {
       body: JSON.stringify(body),
     }),
   sessions: () => request<WorkoutSession[]>("/workouts/sessions"),
+  lastExercisePerformance: (exerciseId: string) =>
+    request<LastExercisePerformance | null>(
+      `/workouts/exercises/${exerciseId}/last-performance`,
+    ),
   createSession: (body: {
     title: string;
     templateId?: string;

@@ -12,6 +12,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  getLastExercisePerformance,
   getSessionsForUser,
   getTemplates,
   importProgramTemplates,
@@ -63,4 +64,14 @@ export const addSetHandler = async (req: Request, res: Response) => {
   const parsed = addSetSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   return res.status(201).json(await addSet(req.params.sessionExerciseId as string, parsed.data));
+};
+
+
+export const getLastExercisePerformanceHandler = async (req: Request, res: Response) => {
+  const result = await getLastExercisePerformance(
+    req.user!.id,
+    req.params.exerciseId as string,
+  );
+
+  return res.status(200).json(result);
 };
