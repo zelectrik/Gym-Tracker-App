@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, authStore } from "./api";
 import type { User } from "./types";
+
 import "./styles.css";
+
 import { AuthScreen } from "./components/AuthScreen";
 import { Shell } from "./components/Shell";
 
@@ -25,7 +27,9 @@ export default function App() {
     );
   }
 
-  if (!user) return <AuthScreen onAuth={setUser} />;
+  if (!user) {
+    return <AuthScreen onAuth={setUser} />;
+  }
 
   return (
     <Shell
