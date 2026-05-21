@@ -522,11 +522,6 @@ function WorkoutSummaryScreen({
             <strong>Récap séance</strong>
             <span>{session.title}</span>
           </div>
-          {onExitFocus && (
-            <button type="button" onClick={onExitFocus}>
-              Quitter
-            </button>
-          )}
         </header>
 
         <main className="one-page-main summary-main">
@@ -618,9 +613,6 @@ function WorkoutSummaryScreen({
             disabled={saving}
           >
             {saving ? "Validation..." : "Valider la fin de séance"}
-          </button>
-          <button className="secondary fullscreen-secondary-button" disabled>
-            Mettre à jour le programme bientôt
           </button>
         </footer>
       </div>
