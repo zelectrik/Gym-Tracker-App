@@ -3,6 +3,7 @@ import { api, authStore } from "./api";
 import { UserDashboard } from "./components/UserDashboard";
 import type { User } from "./types";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { Shell } from "./components/Shell";
 import "./styles.css";
 
 export default function App() {
@@ -121,42 +122,5 @@ function AuthScreen({ onAuth }: { onAuth: (user: User) => void }) {
         </button>
       </form>
     </main>
-  );
-}
-
-function Shell({ user, onLogout }: { user: User; onLogout: () => void }) {
-  const [page, setPage] = useState<"user" | "admin">(
-    user.role === "SUPER_ADMIN" ? "admin" : "user",
-  );
-
-  return (
-    <>
-      <header className="topbar">
-        <div>
-          <strong>Gym Tracker</strong>
-          <span>
-            {user.displayName} · {user.role}
-          </span>
-        </div>
-        <nav>
-          <button
-            className={page === "user" ? "active" : ""}
-            onClick={() => setPage("user")}
-          >
-            Dashboard user
-          </button>
-          {user.role === "SUPER_ADMIN" && (
-            <button
-              className={page === "admin" ? "active" : ""}
-              onClick={() => setPage("admin")}
-            >
-              Super admin
-            </button>
-          )}
-          <button onClick={onLogout}>Déconnexion</button>
-        </nav>
-      </header>
-      {page === "admin" ? <AdminDashboard /> : <UserDashboard user={user} />}
-    </>
   );
 }
