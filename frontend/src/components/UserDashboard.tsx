@@ -11,7 +11,6 @@ import { modeLabels } from "../utils/workoutLabels";
 import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
-import { ActiveWorkout } from "./ActiveWorkout";
 
 export function UserDashboard({ user }: { user: User }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -42,11 +41,10 @@ export function UserDashboard({ user }: { user: User }) {
 
   if (active && focusMode) {
     return (
-      <ActiveWorkout
+      <WorkoutExecutionScreen
         session={active}
         onRefresh={refresh}
         onExitFocus={() => setFocusMode(false)}
-        isFocusMode
       />
     );
   }
@@ -103,9 +101,7 @@ export function UserDashboard({ user }: { user: User }) {
         )}
       </section>
 
-      {active ? (
-        <WorkoutExecutionScreen session={active} onRefresh={refresh} />
-      ) : (
+      {!active && (
         <>
           <ImportProgramJson onImported={refresh} />
           <CreateTemplate exercises={exercises} onCreated={refresh} />

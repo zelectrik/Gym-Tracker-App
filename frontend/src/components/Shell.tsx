@@ -6,9 +6,11 @@ import { UserDashboard } from "./UserDashboard";
 export function Shell({
   user,
   onLogout,
+  isWorkoutFocus,
 }: {
   user: User;
   onLogout: () => void;
+  isWorkoutFocus?: boolean;
 }) {
   const [page, setPage] = useState<"user" | "admin">(
     user.role === "SUPER_ADMIN" ? "admin" : "user",
@@ -16,35 +18,37 @@ export function Shell({
 
   return (
     <>
-      <header className="topbar">
-        <div>
-          <strong>Gym Tracker</strong>
+      {!isWorkoutFocus && (
+        <header className="topbar">
+          <div>
+            <strong>Gym Tracker</strong>
 
-          <span>
-            {user.displayName} · {user.role}
-          </span>
-        </div>
+            <span>
+              {user.displayName} · {user.role}
+            </span>
+          </div>
 
-        <nav>
-          <button
-            className={page === "user" ? "active" : ""}
-            onClick={() => setPage("user")}
-          >
-            Dashboard user
-          </button>
-
-          {user.role === "SUPER_ADMIN" && (
+          <nav>
             <button
-              className={page === "admin" ? "active" : ""}
-              onClick={() => setPage("admin")}
+              className={page === "user" ? "active" : ""}
+              onClick={() => setPage("user")}
             >
-              Super admin
+              Dashboard user
             </button>
-          )}
 
-          <button onClick={onLogout}>Déconnexion</button>
-        </nav>
-      </header>
+            {user.role === "SUPER_ADMIN" && (
+              <button
+                className={page === "admin" ? "active" : ""}
+                onClick={() => setPage("admin")}
+              >
+                Super admin
+              </button>
+            )}
+
+            <button onClick={onLogout}>Déconnexion</button>
+          </nav>
+        </header>
+      )}
 
       {page === "admin" ? <AdminDashboard /> : <UserDashboard user={user} />}
     </>
