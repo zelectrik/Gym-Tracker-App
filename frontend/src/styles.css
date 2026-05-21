@@ -881,8 +881,7 @@ code {
   gap: 12px;
 }
 
-.no-scroll-list {
-  overflow: hidden;
+.scroll-list {
   min-height: 0;
   justify-content: stretch;
 }
@@ -1009,5 +1008,82 @@ code {
 
   .fullscreen-button {
     min-height: 54px;
+  }
+}
+
+/* ===== LAST PERFORMANCE DURING WORKOUT ===== */
+.performance-context {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 8px 0 4px;
+}
+
+.performance-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  text-align: left;
+}
+
+.performance-card span {
+  font-size: 12px;
+  font-weight: 900;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.performance-card b {
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.performance-card small {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.performance-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.performance-split p {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: white;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.performance-split strong {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.last-card {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+@media (max-height: 760px) {
+  .performance-card {
+    padding: 8px 10px;
+  }
+
+  .performance-card b {
+    font-size: 14px;
+  }
+
+  .performance-split p {
+    padding: 6px;
   }
 }

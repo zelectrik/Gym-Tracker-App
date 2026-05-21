@@ -5,6 +5,7 @@ import {
   createTemplateHandler,
   updateTemplateHandler,
   deleteTemplateHandler,
+  getLastExercisePerformanceHandler,
   getSessionsHandler,
   getTemplatesHandler,
   importProgramTemplatesHandler,
@@ -20,6 +21,7 @@ router.post("/templates", createTemplateHandler);
 router.patch("/templates/:templateId", updateTemplateHandler);
 router.delete("/templates/:templateId", deleteTemplateHandler);
 router.post("/templates/import-json", importProgramTemplatesHandler);
+router.get("/exercises/:exerciseId/last-performance", getLastExercisePerformanceHandler);
 router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);
 router.patch("/sessions/:sessionId/status", updateSessionStatusHandler);

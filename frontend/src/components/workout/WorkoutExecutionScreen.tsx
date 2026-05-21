@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
-import type { ExerciseSet, ExerciseSide, SessionExercise, WorkoutSession } from "../../types";
+import type {
+  ExerciseSet,
+  ExerciseSide,
+  LastExercisePerformance,
+  SessionExercise,
+  WorkoutSession,
+} from "../../types";
 
 type WorkoutStep = "warmup" | "exercise-list" | "exercise";
 
@@ -20,7 +26,10 @@ function getSetGroups(exercise: SessionExercise): SetGroup[] {
   const groups = new Map<number, SetGroup>();
 
   [...exercise.sets]
-    .sort((a, b) => a.setNumber - b.setNumber || sideOrder(a.side) - sideOrder(b.side))
+    .sort(
+      (a, b) =>
+        a.setNumber - b.setNumber || sideOrder(a.side) - sideOrder(b.side),
+    )
     .forEach((set) => {
       const group = groups.get(set.setNumber) ?? {
         setNumber: set.setNumber,
@@ -61,8 +70,15 @@ export function WorkoutExecutionScreen({
   onRefresh: () => void;
   onExitFocus?: () => void;
 }) {
-  const [step, setStep] = useState<WorkoutStep>("warmup");
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const warmupStorageKey = `warmup-done-${session.id}`;
+  const [step, setStep] = useState<WorkoutStep>(() =>
+    localStorage.getItem(warmupStorageKey) === "true"
+      ? "exercise-list"
+      : "warmup",
+  );
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
+    null,
+  );
 
   const exercisesWithProgress = useMemo(() => {
     return session.exercises.map((exercise) => {
@@ -88,7 +104,11 @@ export function WorkoutExecutionScreen({
     return (
       <section className="mobile-workout-screen focus-workout-screen">
         <div className="mobile-workout-card one-page-card">
-          <FocusHeader title={session.title} onExitFocus={onExitFocus} onFinish={finishWorkout} />
+          <FocusHeader
+            title={session.title}
+            onExitFocus={onExitFocus}
+            onFinish={finishWorkout}
+          />
 
           <main className="one-page-main warmup-screen">
             <span className="pill">Échauffement</span>
@@ -103,7 +123,13 @@ export function WorkoutExecutionScreen({
           </main>
 
           <footer className="one-page-footer">
-            <button className="primary fullscreen-button" onClick={() => setStep("exercise-list")}>
+            <button
+              className="primary fullscreen-button"
+              onClick={() => {
+                localStorage.setItem(warmupStorageKey, "true");
+                setStep("exercise-list");
+              }}
+            >
               Terminer échauffement
             </button>
           </footer>
@@ -116,20 +142,25 @@ export function WorkoutExecutionScreen({
     return (
       <section className="mobile-workout-screen focus-workout-screen">
         <div className="mobile-workout-card one-page-card">
-          <FocusHeader title={session.title} onExitFocus={onExitFocus} onFinish={finishWorkout} />
+          <FocusHeader
+            title={session.title}
+            onExitFocus={onExitFocus}
+            onFinish={finishWorkout}
+          />
 
           <main className="one-page-main">
             <div className="screen-title-row">
               <div>
                 <span className="pill">Exercices</span>
-                <h2>Liste des exercices</h2>
               </div>
             </div>
 
-            <div className="exercise-mobile-list no-scroll-list">
+            <div className="exercise-mobile-list scroll-list">
               {exercisesWithProgress.map((exercise) => {
                 const total = exercise.sets.length;
-                const done = exercise.sets.filter((set) => set.completed).length;
+                const done = exercise.sets.filter(
+                  (set) => set.completed,
+                ).length;
 
                 return (
                   <button
@@ -157,7 +188,10 @@ export function WorkoutExecutionScreen({
           </main>
 
           <footer className="one-page-footer">
-            <button className="primary fullscreen-button" onClick={finishWorkout}>
+            <button
+              className="primary fullscreen-button"
+              onClick={finishWorkout}
+            >
               Finir l'entraînement
             </button>
           </footer>
@@ -174,13 +208,20 @@ export function WorkoutExecutionScreen({
     return (
       <section className="mobile-workout-screen focus-workout-screen">
         <div className="mobile-workout-card one-page-card">
-          <FocusHeader title={session.title} onExitFocus={onExitFocus} onFinish={finishWorkout} />
+          <FocusHeader
+            title={session.title}
+            onExitFocus={onExitFocus}
+            onFinish={finishWorkout}
+          />
           <main className="one-page-main centered-focus-message">
             <h2>Exercice terminé</h2>
             <p>{selectedExercise.exercise.name}</p>
           </main>
           <footer className="one-page-footer">
-            <button className="primary fullscreen-button" onClick={() => setStep("exercise-list")}>
+            <button
+              className="primary fullscreen-button"
+              onClick={() => setStep("exercise-list")}
+            >
               Retour à la liste
             </button>
           </footer>
@@ -217,18 +258,69 @@ function FocusHeader({
       </div>
 
       <div className="focus-header-actions">
-        <button type="button">Pause</button>
         {onExitFocus && (
           <button type="button" onClick={onExitFocus}>
             Quitter
           </button>
         )}
-        <button type="button" onClick={onFinish}>
-          Finir
-        </button>
       </div>
     </header>
   );
+}
+
+function formatTargetValue({
+  isDurationExercise,
+  reps,
+  weightKg,
+  durationSec,
+}: {
+  isDurationExercise: boolean;
+  reps?: number | null;
+  weightKg?: number | null;
+  durationSec?: number | null;
+}) {
+  if (isDurationExercise) return `${durationSec ?? "?"} sec`;
+  return `${reps ?? "?"} reps · ${weightKg ?? 0} kg`;
+}
+
+function findComparableLastSet(
+  lastPerformance: LastExercisePerformance | null,
+  setNumber: number,
+  side: ExerciseSide,
+) {
+  if (!lastPerformance) return null;
+
+  return (
+    lastPerformance.sets.find(
+      (set) => set.setNumber === setNumber && set.side === side,
+    ) ??
+    lastPerformance.sets.find((set) => set.side === side) ??
+    lastPerformance.sets.find((set) => set.side === "BOTH") ??
+    null
+  );
+}
+
+function formatLastSet(
+  lastPerformance: LastExercisePerformance | null,
+  setNumber: number,
+  side: ExerciseSide,
+  isDurationExercise: boolean,
+) {
+  const lastSet = findComparableLastSet(lastPerformance, setNumber, side);
+
+  if (!lastSet) return "Aucune donnée";
+
+  if (isDurationExercise) return `${lastSet.durationSec ?? "?"} sec`;
+
+  return `${lastSet.reps ?? "?"} reps · ${lastSet.weightKg ?? 0} kg`;
+}
+
+function formatLastDate(value?: string) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(value));
 }
 
 function ExerciseExecutionView({
@@ -247,7 +339,9 @@ function ExerciseExecutionView({
   const isDurationExercise = Boolean(exercise.targetDurationSec);
   const isLeftRight = Boolean(currentGroup.left || currentGroup.right);
 
-  const [bothReps, setBothReps] = useState(currentGroup.both?.reps ?? exercise.targetReps ?? 0);
+  const [bothReps, setBothReps] = useState(
+    currentGroup.both?.reps ?? exercise.targetReps ?? 0,
+  );
   const [bothWeightKg, setBothWeightKg] = useState(
     currentGroup.both?.weightKg ?? exercise.targetWeightKg ?? 0,
   );
@@ -255,13 +349,23 @@ function ExerciseExecutionView({
     currentGroup.both?.durationSec ?? exercise.targetDurationSec ?? 30,
   );
 
-  const [leftReps, setLeftReps] = useState(currentGroup.left?.reps ?? exercise.targetReps ?? 0);
-  const [rightReps, setRightReps] = useState(currentGroup.right?.reps ?? exercise.targetReps ?? 0);
+  const [leftReps, setLeftReps] = useState(
+    currentGroup.left?.reps ?? exercise.targetReps ?? 0,
+  );
+  const [rightReps, setRightReps] = useState(
+    currentGroup.right?.reps ?? exercise.targetReps ?? 0,
+  );
   const [leftWeightKg, setLeftWeightKg] = useState(
-    currentGroup.left?.weightKg ?? exercise.leftWeightKg ?? exercise.targetWeightKg ?? 0,
+    currentGroup.left?.weightKg ??
+      exercise.leftWeightKg ??
+      exercise.targetWeightKg ??
+      0,
   );
   const [rightWeightKg, setRightWeightKg] = useState(
-    currentGroup.right?.weightKg ?? exercise.rightWeightKg ?? exercise.targetWeightKg ?? 0,
+    currentGroup.right?.weightKg ??
+      exercise.rightWeightKg ??
+      exercise.targetWeightKg ??
+      0,
   );
   const [leftDurationSec, setLeftDurationSec] = useState(
     currentGroup.left?.durationSec ?? exercise.targetDurationSec ?? 30,
@@ -270,21 +374,63 @@ function ExerciseExecutionView({
     currentGroup.right?.durationSec ?? exercise.targetDurationSec ?? 30,
   );
   const [saving, setSaving] = useState(false);
+  const [lastPerformance, setLastPerformance] =
+    useState<LastExercisePerformance | null>(null);
+  const [lastPerformanceLoading, setLastPerformanceLoading] = useState(true);
 
   const totalSets = exercise.targetSets ?? getSetGroups(exercise).length;
 
   useEffect(() => {
     setBothReps(currentGroup.both?.reps ?? exercise.targetReps ?? 0);
-    setBothWeightKg(currentGroup.both?.weightKg ?? exercise.targetWeightKg ?? 0);
-    setBothDurationSec(currentGroup.both?.durationSec ?? exercise.targetDurationSec ?? 30);
+    setBothWeightKg(
+      currentGroup.both?.weightKg ?? exercise.targetWeightKg ?? 0,
+    );
+    setBothDurationSec(
+      currentGroup.both?.durationSec ?? exercise.targetDurationSec ?? 30,
+    );
 
     setLeftReps(currentGroup.left?.reps ?? exercise.targetReps ?? 0);
     setRightReps(currentGroup.right?.reps ?? exercise.targetReps ?? 0);
-    setLeftWeightKg(currentGroup.left?.weightKg ?? exercise.leftWeightKg ?? exercise.targetWeightKg ?? 0);
-    setRightWeightKg(currentGroup.right?.weightKg ?? exercise.rightWeightKg ?? exercise.targetWeightKg ?? 0);
-    setLeftDurationSec(currentGroup.left?.durationSec ?? exercise.targetDurationSec ?? 30);
-    setRightDurationSec(currentGroup.right?.durationSec ?? exercise.targetDurationSec ?? 30);
+    setLeftWeightKg(
+      currentGroup.left?.weightKg ??
+        exercise.leftWeightKg ??
+        exercise.targetWeightKg ??
+        0,
+    );
+    setRightWeightKg(
+      currentGroup.right?.weightKg ??
+        exercise.rightWeightKg ??
+        exercise.targetWeightKg ??
+        0,
+    );
+    setLeftDurationSec(
+      currentGroup.left?.durationSec ?? exercise.targetDurationSec ?? 30,
+    );
+    setRightDurationSec(
+      currentGroup.right?.durationSec ?? exercise.targetDurationSec ?? 30,
+    );
   }, [currentGroup, exercise]);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLastPerformanceLoading(true);
+
+    api
+      .lastExercisePerformance(exercise.exerciseId)
+      .then((result) => {
+        if (isMounted) setLastPerformance(result);
+      })
+      .catch(() => {
+        if (isMounted) setLastPerformance(null);
+      })
+      .finally(() => {
+        if (isMounted) setLastPerformanceLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [exercise.exerciseId]);
 
   async function validateGroup() {
     setSaving(true);
@@ -334,7 +480,9 @@ function ExerciseExecutionView({
 
       await onRefresh();
       const remainingAfterCurrent = getSetGroups(exercise).filter(
-        (group) => group.setNumber !== currentGroup.setNumber && !isGroupCompleted(group),
+        (group) =>
+          group.setNumber !== currentGroup.setNumber &&
+          !isGroupCompleted(group),
       );
 
       if (remainingAfterCurrent.length === 0) {
@@ -355,11 +503,15 @@ function ExerciseExecutionView({
           api.addSet(exercise.id, {
             setNumber: set.setNumber,
             side: set.side,
-            reps: isDurationExercise ? undefined : (set.reps ?? exercise.targetReps ?? 0),
+            reps: isDurationExercise
+              ? undefined
+              : (set.reps ?? exercise.targetReps ?? 0),
             weightKg: isDurationExercise
               ? undefined
               : (set.weightKg ?? defaultWeightForSet(exercise, set.side)),
-            durationSec: isDurationExercise ? (set.durationSec ?? exercise.targetDurationSec ?? 0) : undefined,
+            durationSec: isDurationExercise
+              ? (set.durationSec ?? exercise.targetDurationSec ?? 0)
+              : undefined,
             completed: true,
           }),
         ),
@@ -387,8 +539,21 @@ function ExerciseExecutionView({
         <main className="one-page-main exercise-step-main">
           <div className="exercise-step-title">
             <h2>{exercise.exercise.name}</h2>
-            <span>{isLeftRight ? "Gauche / Droite" : displaySide(currentGroup.both?.side ?? "BOTH")}</span>
+            <span>
+              {isLeftRight
+                ? "Gauche / Droite"
+                : displaySide(currentGroup.both?.side ?? "BOTH")}
+            </span>
           </div>
+
+          <PerformanceContext
+            exercise={exercise}
+            currentGroup={currentGroup}
+            isLeftRight={isLeftRight}
+            isDurationExercise={isDurationExercise}
+            lastPerformance={lastPerformance}
+            lastPerformanceLoading={lastPerformanceLoading}
+          />
 
           {isLeftRight ? (
             <LeftRightFields
@@ -420,16 +585,132 @@ function ExerciseExecutionView({
         </main>
 
         <footer className="one-page-footer execution-footer">
-          <button className="primary fullscreen-button" onClick={validateGroup} disabled={saving}>
+          <button
+            className="primary fullscreen-button"
+            onClick={validateGroup}
+            disabled={saving}
+          >
             Valider
           </button>
 
-          <button className="secondary fullscreen-secondary-button" onClick={finishExerciseEarly} disabled={saving}>
+          <button
+            className="secondary fullscreen-secondary-button"
+            onClick={finishExerciseEarly}
+            disabled={saving}
+          >
             Fin d'exercice
           </button>
         </footer>
       </div>
     </section>
+  );
+}
+
+function PerformanceContext({
+  exercise,
+  currentGroup,
+  isLeftRight,
+  isDurationExercise,
+  lastPerformance,
+  lastPerformanceLoading,
+}: {
+  exercise: SessionExercise;
+  currentGroup: SetGroup;
+  isLeftRight: boolean;
+  isDurationExercise: boolean;
+  lastPerformance: LastExercisePerformance | null;
+  lastPerformanceLoading: boolean;
+}) {
+  return (
+    <div className="performance-context">
+      <div className="performance-card target-card">
+        <span>Objectif prévu</span>
+
+        {isLeftRight ? (
+          <div className="performance-split">
+            <p>
+              <strong>Gauche</strong>
+              {formatTargetValue({
+                isDurationExercise,
+                reps: exercise.targetReps,
+                weightKg: exercise.leftWeightKg ?? exercise.targetWeightKg,
+                durationSec: exercise.targetDurationSec,
+              })}
+            </p>
+            <p>
+              <strong>Droite</strong>
+              {formatTargetValue({
+                isDurationExercise,
+                reps: exercise.targetReps,
+                weightKg: exercise.rightWeightKg ?? exercise.targetWeightKg,
+                durationSec: exercise.targetDurationSec,
+              })}
+            </p>
+          </div>
+        ) : (
+          <b>
+            {formatTargetValue({
+              isDurationExercise,
+              reps: exercise.targetReps,
+              weightKg: exercise.targetWeightKg,
+              durationSec: exercise.targetDurationSec,
+            })}
+          </b>
+        )}
+      </div>
+
+      <div className="performance-card last-card">
+        <span>Dernière fois</span>
+
+        {lastPerformanceLoading ? (
+          <b>Chargement...</b>
+        ) : !lastPerformance ? (
+          <b>Aucune donnée</b>
+        ) : isLeftRight ? (
+          <>
+            <small>
+              {lastPerformance.sessionTitle} ·{" "}
+              {formatLastDate(lastPerformance.completedAt)}
+            </small>
+            <div className="performance-split">
+              <p>
+                <strong>Gauche</strong>
+                {formatLastSet(
+                  lastPerformance,
+                  currentGroup.setNumber,
+                  "LEFT",
+                  isDurationExercise,
+                )}
+              </p>
+              <p>
+                <strong>Droite</strong>
+                {formatLastSet(
+                  lastPerformance,
+                  currentGroup.setNumber,
+                  "RIGHT",
+                  isDurationExercise,
+                )}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <small>
+              {lastPerformance.sessionTitle} ·{" "}
+              {formatLastDate(lastPerformance.completedAt)}
+            </small>
+            <b>
+              {formatLastSet(
+                lastPerformance,
+                currentGroup.setNumber,
+                "BOTH",
+                isDurationExercise,
+              )}
+            </b>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -455,7 +736,11 @@ function BilateralFields({
       <div className="execution-fields step-fields">
         <label>
           Durée
-          <input type="number" value={durationSec} onChange={(e) => setDurationSec(Number(e.target.value))} />
+          <input
+            type="number"
+            value={durationSec}
+            onChange={(e) => setDurationSec(Number(e.target.value))}
+          />
         </label>
       </div>
     );
@@ -465,12 +750,21 @@ function BilateralFields({
     <div className="execution-fields step-fields">
       <label>
         Répétition
-        <input type="number" value={reps} onChange={(e) => setReps(Number(e.target.value))} />
+        <input
+          type="number"
+          value={reps}
+          onChange={(e) => setReps(Number(e.target.value))}
+        />
       </label>
 
       <label>
         Poids
-        <input type="number" step="0.5" value={weightKg} onChange={(e) => setWeightKg(Number(e.target.value))} />
+        <input
+          type="number"
+          step="0.5"
+          value={weightKg}
+          onChange={(e) => setWeightKg(Number(e.target.value))}
+        />
       </label>
     </div>
   );
@@ -513,8 +807,16 @@ function LeftRightFields({
         <strong>Droite</strong>
 
         <span>Durée</span>
-        <input type="number" value={leftDurationSec} onChange={(e) => setLeftDurationSec(Number(e.target.value))} />
-        <input type="number" value={rightDurationSec} onChange={(e) => setRightDurationSec(Number(e.target.value))} />
+        <input
+          type="number"
+          value={leftDurationSec}
+          onChange={(e) => setLeftDurationSec(Number(e.target.value))}
+        />
+        <input
+          type="number"
+          value={rightDurationSec}
+          onChange={(e) => setRightDurationSec(Number(e.target.value))}
+        />
       </div>
     );
   }
@@ -526,18 +828,38 @@ function LeftRightFields({
       <strong>Droite</strong>
 
       <span>Répétition</span>
-      <input type="number" value={leftReps} onChange={(e) => setLeftReps(Number(e.target.value))} />
-      <input type="number" value={rightReps} onChange={(e) => setRightReps(Number(e.target.value))} />
+      <input
+        type="number"
+        value={leftReps}
+        onChange={(e) => setLeftReps(Number(e.target.value))}
+      />
+      <input
+        type="number"
+        value={rightReps}
+        onChange={(e) => setRightReps(Number(e.target.value))}
+      />
 
       <span>Poids</span>
-      <input type="number" step="0.5" value={leftWeightKg} onChange={(e) => setLeftWeightKg(Number(e.target.value))} />
-      <input type="number" step="0.5" value={rightWeightKg} onChange={(e) => setRightWeightKg(Number(e.target.value))} />
+      <input
+        type="number"
+        step="0.5"
+        value={leftWeightKg}
+        onChange={(e) => setLeftWeightKg(Number(e.target.value))}
+      />
+      <input
+        type="number"
+        step="0.5"
+        value={rightWeightKg}
+        onChange={(e) => setRightWeightKg(Number(e.target.value))}
+      />
     </div>
   );
 }
 
 function defaultWeightForSet(exercise: SessionExercise, side: ExerciseSide) {
-  if (side === "LEFT") return exercise.leftWeightKg ?? exercise.targetWeightKg ?? 0;
-  if (side === "RIGHT") return exercise.rightWeightKg ?? exercise.targetWeightKg ?? 0;
+  if (side === "LEFT")
+    return exercise.leftWeightKg ?? exercise.targetWeightKg ?? 0;
+  if (side === "RIGHT")
+    return exercise.rightWeightKg ?? exercise.targetWeightKg ?? 0;
   return exercise.targetWeightKg ?? 0;
 }

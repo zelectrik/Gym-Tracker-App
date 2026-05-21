@@ -390,6 +390,57 @@ export const createSession = async (ownerId: string, data: any) => {
   });
 };
 
+
+export const getLastExercisePerformance = async (userId: string, exerciseId: string) => {
+  const lastSessionExercise = await prisma.sessionExercise.findFirst({
+    where: {
+      exerciseId,
+      sets: { some: { completed: true } },
+      session: {
+        status: "COMPLETED",
+        participants: { some: { userId } },
+      },
+    },
+    include: {
+      exercise: true,
+      sets: {
+        where: { completed: true },
+        orderBy: [{ setNumber: "asc" }, { side: "asc" }],
+      },
+      session: {
+        select: {
+          id: true,
+          title: true,
+          completedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: [
+      { session: { completedAt: "desc" } },
+      { session: { createdAt: "desc" } },
+    ],
+  });
+
+  if (!lastSessionExercise) return null;
+
+  return {
+    exerciseId,
+    exerciseName: lastSessionExercise.exercise.name,
+    sessionId: lastSessionExercise.session.id,
+    sessionTitle: lastSessionExercise.session.title,
+    completedAt: lastSessionExercise.session.completedAt ?? lastSessionExercise.session.createdAt,
+    sets: lastSessionExercise.sets.map((set) => ({
+      setNumber: set.setNumber,
+      side: set.side,
+      reps: set.reps,
+      weightKg: set.weightKg,
+      durationSec: set.durationSec,
+      distanceMeters: set.distanceMeters,
+    })),
+  };
+};
+
 export const getSessionsForUser = (userId: string) =>
   prisma.workoutSession.findMany({
     where: { participants: { some: { userId } } },
