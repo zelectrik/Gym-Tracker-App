@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, authStore } from "./api";
+import { sideLabels, modeLabels } from "./utils/workoutLabels";
+import { ExerciseList } from "./components/ExerciseList";
 import type {
   Exercise,
   ExerciseSide,
@@ -39,17 +41,6 @@ const muscleGroups: MuscleGroup[] = [
   "CORE",
   "FULL_BODY",
 ];
-
-const sideLabels: Record<ExerciseSide, string> = {
-  BOTH: "bilatéral",
-  LEFT: "gauche",
-  RIGHT: "droite",
-};
-
-const modeLabels: Record<ExecutionMode, string> = {
-  BILATERAL: "bilatéral",
-  LEFT_RIGHT: "gauche puis droite",
-};
 
 type PlannedExerciseDraft = {
   exerciseId: string;
@@ -950,20 +941,4 @@ function SetRow({
 
 function sideOrder(side: ExerciseSide) {
   return side === "BOTH" ? 0 : side === "LEFT" ? 1 : 2;
-}
-
-function ExerciseList({ exercises }: { exercises: Exercise[] }) {
-  return (
-    <section className="card">
-      <h3>Exercices disponibles</h3>
-      <div className="exercise-list">
-        {exercises.map((ex) => (
-          <div key={ex.id}>
-            <b>{ex.name}</b>
-            <span>{ex.muscleGroup}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
 }
