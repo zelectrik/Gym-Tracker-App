@@ -417,6 +417,14 @@ function ExerciseExecutionView({
       return plannedValues;
     }
 
+    if (currentGroup.setNumber === 1 && lastSet) {
+      return {
+        reps: lastSet.reps ?? plannedValues.reps,
+        weightKg: lastSet.weightKg ?? plannedValues.weightKg,
+        durationSec: lastSet.durationSec ?? plannedValues.durationSec,
+      };
+    }
+
     if (previousSet) {
       return {
         reps: previousSet.reps ?? plannedValues.reps,
