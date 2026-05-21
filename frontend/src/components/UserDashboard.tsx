@@ -8,7 +8,7 @@ import type {
   WorkoutTemplate,
 } from "../types";
 import { modeLabels } from "../utils/workoutLabels";
-import { ActiveWorkout } from "./ActiveWorkout";
+import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 
@@ -82,7 +82,7 @@ export function UserDashboard({ user }: { user: User }) {
       </section>
 
       {active ? (
-        <ActiveWorkout session={active} onRefresh={refresh} />
+        <WorkoutExecutionScreen session={active} onRefresh={refresh} />
       ) : (
         <>
           <ImportProgramJson onImported={refresh} />

@@ -669,3 +669,89 @@ code {
     padding-left: 18px;
   }
 }
+
+
+.mobile-workout-screen {
+  height: calc(100vh - 80px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 12px;
+}
+
+.mobile-workout-card {
+  width: 100%;
+  max-width: 520px;
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.mobile-workout-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.exercise-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+.exercise-mobile-item {
+  border: none;
+  background: #f3f4f6;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: left;
+}
+
+.exercise-mobile-item.done {
+  opacity: 0.45;
+}
+
+.execution-card {
+  justify-content: space-between;
+}
+
+.execution-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.execution-fields input {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 58px;
+  font-size: 24px;
+}
+
+.fullscreen-button {
+  min-height: 64px;
+  font-size: 20px;
+}
+
+.side-badge {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.exercise-progress {
+  opacity: 0.7;
+}
+
+.back-button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 16px;
+}
