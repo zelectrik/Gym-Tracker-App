@@ -8,7 +8,7 @@ import type {
   WorkoutSession,
 } from "../../types";
 
-type WorkoutStep = "warmup" | "exercise-list" | "exercise";
+type WorkoutStep = "warmup" | "exercise-list" | "exercise" | "summary";
 
 type SetGroup = {
   setNumber: number;
@@ -95,8 +95,13 @@ export function WorkoutExecutionScreen({
     (exercise) => exercise.id === selectedExerciseId,
   );
 
-  async function finishWorkout() {
+  function openSummary() {
+    setStep("summary");
+  }
+
+  async function completeWorkout() {
     await api.updateSessionStatus(session.id, "COMPLETED");
+    localStorage.removeItem(warmupStorageKey);
     onRefresh();
   }
 
@@ -107,7 +112,7 @@ export function WorkoutExecutionScreen({
           <FocusHeader
             title={session.title}
             onExitFocus={onExitFocus}
-            onFinish={finishWorkout}
+            onFinish={openSummary}
           />
 
           <main className="one-page-main warmup-screen">
@@ -145,7 +150,7 @@ export function WorkoutExecutionScreen({
           <FocusHeader
             title={session.title}
             onExitFocus={onExitFocus}
-            onFinish={finishWorkout}
+            onFinish={openSummary}
           />
 
           <main className="one-page-main">
@@ -188,15 +193,23 @@ export function WorkoutExecutionScreen({
           </main>
 
           <footer className="one-page-footer">
-            <button
-              className="primary fullscreen-button"
-              onClick={finishWorkout}
-            >
+            <button className="primary fullscreen-button" onClick={openSummary}>
               Finir l'entraînement
             </button>
           </footer>
         </div>
       </section>
+    );
+  }
+
+  if (step === "summary") {
+    return (
+      <WorkoutSummaryScreen
+        session={session}
+        onBack={() => setStep("exercise-list")}
+        onExitFocus={onExitFocus}
+        onComplete={completeWorkout}
+      />
     );
   }
 
@@ -211,7 +224,7 @@ export function WorkoutExecutionScreen({
           <FocusHeader
             title={session.title}
             onExitFocus={onExitFocus}
-            onFinish={finishWorkout}
+            onFinish={openSummary}
           />
           <main className="one-page-main centered-focus-message">
             <h2>Exercice terminé</h2>
@@ -263,8 +276,347 @@ function FocusHeader({
             Quitter
           </button>
         )}
+        <button type="button" className="primary" onClick={onFinish}>
+          Récap
+        </button>
       </div>
     </header>
+  );
+}
+
+type ExerciseSummary = {
+  exercise: SessionExercise;
+  completedSets: ExerciseSet[];
+  plannedSets: number;
+  totalSets: number;
+  volumeKg: number;
+  durationSec: number;
+  status: "done" | "partial" | "skipped";
+  performance: "good" | "ok" | "hard" | "skipped";
+  label: string;
+  advice: string;
+};
+
+function getCompletedSets(exercise: SessionExercise) {
+  return exercise.sets.filter((set) => set.completed);
+}
+
+function getSetVolume(set: ExerciseSet) {
+  return (set.reps ?? 0) * (set.weightKg ?? 0);
+}
+
+function getSetEffortValue(set: ExerciseSet) {
+  if (set.durationSec) return set.durationSec;
+  return getSetVolume(set);
+}
+
+function hasStrongDrop(sets: ExerciseSet[]) {
+  if (sets.length < 2) return false;
+
+  const first = getSetEffortValue(sets[0]);
+  const last = getSetEffortValue(sets[sets.length - 1]);
+
+  if (!first) return false;
+
+  const dropRatio = (first - last) / first;
+
+  return dropRatio >= 0.18;
+}
+
+function hasWeightDrop(sets: ExerciseSet[]) {
+  const weights = sets
+    .map((set) => set.weightKg ?? 0)
+    .filter((weight) => weight > 0);
+
+  if (weights.length < 2) return false;
+
+  return weights[weights.length - 1] < weights[0];
+}
+
+function hasRepsDrop(sets: ExerciseSet[]) {
+  const reps = sets.map((set) => set.reps ?? 0).filter((value) => value > 0);
+
+  if (reps.length < 2) return false;
+
+  return reps[reps.length - 1] < reps[0];
+}
+
+function analyzeExercisePerformance({
+  completedSets,
+  plannedSets,
+}: {
+  completedSets: ExerciseSet[];
+  plannedSets: number;
+}) {
+  if (completedSets.length === 0) {
+    return {
+      performance: "skipped" as const,
+      label: "Sauté",
+      advice:
+        "Exercice non réalisé. Garde-le dans le programme pour la prochaine séance.",
+    };
+  }
+
+  if (completedSets.length < plannedSets) {
+    return {
+      performance: "hard" as const,
+      label: "Partiel",
+      advice:
+        "Exercice terminé avant la fin. Garde les mêmes objectifs avant de monter la charge.",
+    };
+  }
+
+  const strongDrop = hasStrongDrop(completedSets);
+  const repsDrop = hasRepsDrop(completedSets);
+  const weightDrop = hasWeightDrop(completedSets);
+
+  if (strongDrop || (repsDrop && weightDrop)) {
+    return {
+      performance: "hard" as const,
+      label: "Difficile",
+      advice:
+        "Baisse visible sur les séries. Garde le même poids ou baisse légèrement pour valider proprement.",
+    };
+  }
+
+  if (repsDrop || weightDrop) {
+    return {
+      performance: "ok" as const,
+      label: "Correct",
+      advice:
+        "Exercice validé, mais avec une légère baisse. Essaie de stabiliser toutes les séries.",
+    };
+  }
+
+  return {
+    performance: "good" as const,
+    label: "Solide",
+    advice:
+      "Performance stable. Si les sensations étaient bonnes, tu peux tenter +1 rep ou +1 à +2,5 kg.",
+  };
+}
+
+function buildExerciseSummary(exercise: SessionExercise): ExerciseSummary {
+  const completedSets = getCompletedSets(exercise);
+  const plannedSets = exercise.sets.length;
+  const volumeKg = completedSets.reduce(
+    (sum, set) => sum + getSetVolume(set),
+    0,
+  );
+  const durationSec = completedSets.reduce(
+    (sum, set) => sum + (set.durationSec ?? 0),
+    0,
+  );
+
+  const status =
+    completedSets.length === 0
+      ? "skipped"
+      : completedSets.length >= plannedSets
+        ? "done"
+        : "partial";
+
+  const analysis = analyzeExercisePerformance({
+    completedSets,
+    plannedSets,
+  });
+
+  return {
+    exercise,
+    completedSets,
+    plannedSets,
+    totalSets: completedSets.length,
+    volumeKg,
+    durationSec,
+    status,
+    ...analysis,
+  };
+}
+
+function formatDuration(totalSeconds: number) {
+  if (!totalSeconds) return "0 sec";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (!minutes) return `${seconds} sec`;
+  return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
+}
+
+function formatMuscleLabel(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+function getSummaryTip({
+  completedSets,
+  plannedSets,
+}: {
+  completedSets: number;
+  plannedSets: number;
+}) {
+  if (completedSets === 0)
+    return "Séance non complétée : garde le programme tel quel pour la prochaine fois.";
+  if (completedSets < plannedSets)
+    return "Certaines séries ont été sautées : garde les mêmes objectifs avant de monter la charge.";
+  return "Bonne séance : si les dernières séries passent proprement, tu peux tenter +1 rep ou +1 à +2,5 kg la prochaine fois.";
+}
+
+function WorkoutSummaryScreen({
+  session,
+  onBack,
+  onExitFocus,
+  onComplete,
+}: {
+  session: WorkoutSession;
+  onBack: () => void;
+  onExitFocus?: () => void;
+  onComplete: () => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+  const summaries = session.exercises.map(buildExerciseSummary);
+  const completedExercises = summaries.filter(
+    (summary) => summary.status === "done",
+  ).length;
+  const partialExercises = summaries.filter(
+    (summary) => summary.status === "partial",
+  ).length;
+  const skippedExercises = summaries.filter(
+    (summary) => summary.status === "skipped",
+  ).length;
+  const completedSets = summaries.reduce(
+    (sum, summary) => sum + summary.completedSets.length,
+    0,
+  );
+  const plannedSets = summaries.reduce(
+    (sum, summary) => sum + summary.plannedSets,
+    0,
+  );
+  const totalVolumeKg = summaries.reduce(
+    (sum, summary) => sum + summary.volumeKg,
+    0,
+  );
+  const totalDurationSec = summaries.reduce(
+    (sum, summary) => sum + summary.durationSec,
+    0,
+  );
+  const workedMuscles = Array.from(
+    new Set(
+      session.exercises.flatMap((exercise) => exercise.exercise.muscles ?? []),
+    ),
+  );
+
+  async function complete() {
+    setSaving(true);
+    try {
+      await onComplete();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mobile-workout-screen focus-workout-screen">
+      <div className="mobile-workout-card one-page-card summary-card">
+        <header className="focus-header compact-focus-header">
+          <button className="back-button" onClick={onBack}>
+            ← Retour
+          </button>
+          <div>
+            <strong>Récap séance</strong>
+            <span>{session.title}</span>
+          </div>
+        </header>
+
+        <main className="one-page-main summary-main">
+          <section className="summary-hero">
+            <span className="pill">Séance terminée ?</span>
+            <h2>Voilà ce que tu as fait</h2>
+          </section>
+
+          <section className="summary-stats-grid">
+            <div>
+              <b>{completedExercises}</b>
+              <span>exercices finis</span>
+            </div>
+            <div>
+              <b>
+                {completedSets}/{plannedSets}
+              </b>
+              <span>séries validées</span>
+            </div>
+            <div>
+              <b>{Math.round(totalVolumeKg)}</b>
+              <span>kg volume</span>
+            </div>
+            <div>
+              <b>{formatDuration(totalDurationSec)}</b>
+              <span>temps tenu</span>
+            </div>
+          </section>
+
+          <section className="summary-section">
+            <h3>Parties travaillées</h3>
+            <div className="summary-tags">
+              {workedMuscles.length ? (
+                workedMuscles.map((muscle) => (
+                  <span key={muscle}>{formatMuscleLabel(muscle)}</span>
+                ))
+              ) : (
+                <span>Aucune donnée</span>
+              )}
+            </div>
+          </section>
+
+          <section className="summary-section summary-tip-box">
+            <h3>Tip progression</h3>
+            <p>{getSummaryTip({ completedSets, plannedSets })}</p>
+          </section>
+
+          {(partialExercises > 0 || skippedExercises > 0) && (
+            <section className="summary-section summary-warning-box">
+              <h3>À noter</h3>
+              <p>
+                {partialExercises} exercice(s) partiel(s), {skippedExercises}{" "}
+                exercice(s) sauté(s). Tu pourras décider plus tard si tu veux
+                mettre à jour le programme avec les valeurs réalisées.
+              </p>
+            </section>
+          )}
+
+          <section className="summary-section">
+            <h3>Détail exercices</h3>
+            <div className="summary-exercise-list">
+              {summaries.map((summary) => (
+                <article
+                  className={`summary-exercise-item ${summary.status}`}
+                  key={summary.exercise.id}
+                >
+                  <div>
+                    <strong>{summary.exercise.exercise.name}</strong>
+                    <span>
+                      {summary.completedSets.length}/{summary.plannedSets}{" "}
+                      séries · {Math.round(summary.volumeKg)} kg
+                      {summary.durationSec
+                        ? ` · ${formatDuration(summary.durationSec)}`
+                        : ""}
+                    </span>
+                    <small>{summary.advice}</small>
+                  </div>
+                  <b>{summary.label}</b>
+                </article>
+              ))}
+            </div>
+          </section>
+        </main>
+
+        <footer className="one-page-footer summary-footer">
+          <button
+            className="primary fullscreen-button"
+            onClick={complete}
+            disabled={saving}
+          >
+            {saving ? "Validation..." : "Valider la fin de séance"}
+          </button>
+        </footer>
+      </div>
+    </section>
   );
 }
 
