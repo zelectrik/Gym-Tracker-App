@@ -6,9 +6,13 @@ import { ExerciseTable } from "./ExerciseTable";
 export function ActiveWorkout({
   session,
   onRefresh,
+  onExitFocus,
+  isFocusMode = false,
 }: {
   session: WorkoutSession;
   onRefresh: () => void;
+  onExitFocus?: () => void;
+  isFocusMode?: boolean;
 }) {
   const [selectedExerciseId, setSelectedExerciseId] = useState(
     session.exercises[0]?.id ?? "",
@@ -32,22 +36,26 @@ export function ActiveWorkout({
   }
 
   return (
-    <section className="card active-workout">
+    <section
+      className={`active-workout ${isFocusMode ? "workout-focus" : "card"}`}
+    >
       <div className="section-title sticky-workout-head">
         <div>
           <span className="pill">Séance en cours</span>
 
           <h3>{session.title}</h3>
+          <div className="focus-actions">
+            {onExitFocus && (
+              <button type="button" onClick={onExitFocus}>
+                Quitter
+              </button>
+            )}
 
-          <p>
-            Choisis l’exercice disponible en salle, puis valide les lignes
-            préremplies.
-          </p>
+            <button className="primary finish-button" onClick={finish}>
+              Terminer
+            </button>
+          </div>
         </div>
-
-        <button className="primary finish-button" onClick={finish}>
-          Terminer
-        </button>
       </div>
 
       <div className="exercise-switcher">

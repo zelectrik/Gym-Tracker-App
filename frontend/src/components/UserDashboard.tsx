@@ -8,7 +8,7 @@ import type {
   WorkoutTemplate,
 } from "../types";
 import { modeLabels } from "../utils/workoutLabels";
-import { ActiveWorkout } from "./ActiveWorkout";
+import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 
@@ -17,6 +17,7 @@ export function UserDashboard({ user }: { user: User }) {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [focusMode, setFocusMode] = useState(true);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
 
@@ -38,6 +39,16 @@ export function UserDashboard({ user }: { user: User }) {
     refresh();
   }, []);
 
+  if (active && focusMode) {
+    return (
+      <WorkoutExecutionScreen
+        session={active}
+        onRefresh={refresh}
+        onExitFocus={() => setFocusMode(false)}
+      />
+    );
+  }
+
   async function launch(template: WorkoutTemplate) {
     const created = await api.createSession({
       title: template.name,
@@ -52,6 +63,15 @@ export function UserDashboard({ user }: { user: User }) {
   return (
     <main className="layout">
       <section className="card dashboard-head">
+        {active && (
+          <section className="card">
+            <h3>Séance en cours</h3>
+            <p>{active.title}</p>
+            <button className="primary" onClick={() => setFocusMode(true)}>
+              Reprendre en mode focus
+            </button>
+          </section>
+        )}
         <div>
           <h2>Dashboard de {user.displayName}</h2>
 
@@ -81,9 +101,7 @@ export function UserDashboard({ user }: { user: User }) {
         )}
       </section>
 
-      {active ? (
-        <ActiveWorkout session={active} onRefresh={refresh} />
-      ) : (
+      {!active && (
         <>
           <ImportProgramJson onImported={refresh} />
           <CreateTemplate exercises={exercises} onCreated={refresh} />

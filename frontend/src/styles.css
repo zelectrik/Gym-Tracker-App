@@ -580,6 +580,42 @@ code {
   grid-column: 5;
 }
 
+.workout-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #f4f7fb;
+  padding: 16px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.workout-focus .sticky-workout-head {
+  position: static;
+}
+
+.workout-focus .exercise-switcher {
+  overflow-x: auto;
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.workout-focus .exercise-switcher button {
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.workout-focus .logger {
+  height: 100%;
+  overflow: hidden;
+}
+
+.focus-actions {
+  display: flex;
+  gap: 10px;
+}
 
 /* ===== MOBILE UX IMPROVEMENTS ===== */
 
@@ -667,5 +703,311 @@ code {
 
   .template-summary {
     padding-left: 18px;
+  }
+}
+
+.mobile-workout-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  width: 100vw;
+  height: 100dvh;
+  background: #f4f7fb;
+  overflow: hidden;
+}
+
+.mobile-workout-card {
+  width: 100%;
+  max-width: 520px;
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.mobile-workout-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.exercise-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+.exercise-mobile-item {
+  border: none;
+  background: #f3f4f6;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: left;
+}
+
+.exercise-mobile-item.done {
+  opacity: 0.45;
+}
+
+.execution-card {
+  justify-content: space-between;
+}
+
+.execution-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.execution-fields input {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 58px;
+  font-size: 24px;
+}
+
+.fullscreen-button {
+  min-height: 64px;
+  font-size: 20px;
+}
+
+.side-badge {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.exercise-progress {
+  opacity: 0.7;
+}
+
+.back-button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 16px;
+}
+
+/* ===== STEP-BY-STEP WORKOUT FLOW ===== */
+.focus-workout-screen {
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 10px;
+  background: #f3f7fc;
+  overflow: hidden;
+}
+
+.one-page-card {
+  height: 100%;
+  max-height: 100%;
+  padding: 12px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+}
+
+.focus-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.focus-header div:first-child {
+  min-width: 0;
+}
+
+.focus-header strong {
+  display: block;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-header span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.focus-header-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.focus-header-actions button,
+.compact-focus-header button {
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font-weight: 800;
+  background: #e9eef7;
+  color: #0f172a;
+}
+
+.one-page-main {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.one-page-footer {
+  display: grid;
+  gap: 10px;
+}
+
+.warmup-screen {
+  justify-content: center;
+  text-align: center;
+}
+
+.screen-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.no-scroll-list {
+  overflow: hidden;
+  min-height: 0;
+  justify-content: stretch;
+}
+
+.focus-exercise-item {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.focus-exercise-item div {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.focus-exercise-item.done {
+  background: #e5e7eb;
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.execution-step-card {
+  max-width: 460px;
+}
+
+.compact-focus-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.exercise-step-main {
+  justify-content: center;
+  text-align: center;
+}
+
+.exercise-step-title h2 {
+  font-size: clamp(26px, 7vw, 34px);
+  margin: 0 0 8px;
+}
+
+.exercise-step-title span,
+.exercise-progress {
+  color: #475569;
+  font-weight: 900;
+}
+
+.step-fields {
+  gap: 18px;
+}
+
+.step-fields label {
+  text-align: center;
+  font-weight: 900;
+  color: #334155;
+}
+
+.step-fields input,
+.left-right-fields input {
+  text-align: center;
+  font-weight: 900;
+  color: #0f172a;
+  background: #eef6ff;
+  border: 0;
+}
+
+.left-right-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+
+.left-right-fields span,
+.left-right-fields strong {
+  font-weight: 900;
+  color: #334155;
+}
+
+.left-right-fields input {
+  min-height: 52px;
+  font-size: 18px;
+  border-radius: 12px;
+  width: 100%;
+}
+
+.execution-footer {
+  grid-template-rows: auto auto;
+}
+
+.fullscreen-secondary-button {
+  min-height: 50px;
+  font-size: 16px;
+  border-radius: 16px;
+  border: 0;
+  background: #e9eef7;
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.centered-focus-message {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+@media (max-height: 720px) {
+  .one-page-card {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .focus-exercise-item {
+    min-height: 56px;
+    padding: 12px;
+  }
+
+  .exercise-step-title h2 {
+    font-size: 26px;
+  }
+
+  .fullscreen-button {
+    min-height: 54px;
   }
 }
