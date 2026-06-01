@@ -117,6 +117,24 @@ export type ExerciseSet = {
   distanceMeters?: number | null;
   completed?: boolean;
 };
+
+
+export type CardioEntry = {
+  id: string;
+  sessionExerciseId: string;
+  durationSec?: number | null;
+  distanceKm?: number | null;
+  calories?: number | null;
+  speedKmh?: number | null;
+  inclinePercent?: number | null;
+  avgHeartRate?: number | null;
+  maxHeartRate?: number | null;
+  watts?: number | null;
+  rpm?: number | null;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
 export type SessionExercise = {
   id: string;
   exerciseId: string;
@@ -132,6 +150,7 @@ export type SessionExercise = {
   rightWeightKg?: number | null;
   notes?: string | null;
   sets: ExerciseSet[];
+  cardioEntry?: CardioEntry | null;
 };
 export type WorkoutSession = {
   id: string;
@@ -188,6 +207,7 @@ export type LastExercisePerformance = {
     durationSec?: number | null;
     distanceMeters?: number | null;
   }>;
+  cardioEntry?: CardioEntry | null;
 };
 
 export type ExerciseTrackingType = "STRENGTH" | "CARDIO";

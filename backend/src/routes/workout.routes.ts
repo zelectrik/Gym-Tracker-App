@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   addSetHandler,
+  upsertCardioEntryHandler,
   createSessionHandler,
   createTemplateHandler,
   updateTemplateHandler,
@@ -26,5 +27,6 @@ router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);
 router.patch("/sessions/:sessionId/status", updateSessionStatusHandler);
 router.post("/session-exercises/:sessionExerciseId/sets", addSetHandler);
+router.put("/session-exercises/:sessionExerciseId/cardio-entry", upsertCardioEntryHandler);
 
 export default router;

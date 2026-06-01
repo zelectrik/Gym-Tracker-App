@@ -43,6 +43,21 @@ const setSchema = z.object({
   completed: z.boolean().optional(),
 });
 
+
+export const cardioEntrySchema = z.object({
+  durationSec: z.number().int().min(1).optional(),
+  distanceKm: z.number().min(0).optional(),
+  calories: z.number().int().min(0).optional(),
+  speedKmh: z.number().min(0).optional(),
+  inclinePercent: z.number().min(0).optional(),
+  avgHeartRate: z.number().int().min(0).optional(),
+  maxHeartRate: z.number().int().min(0).optional(),
+  watts: z.number().int().min(0).optional(),
+  rpm: z.number().int().min(0).optional(),
+  notes: z.string().trim().optional(),
+});
+
+
 export const createWorkoutTemplateSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().optional(),

@@ -12,6 +12,7 @@ import type {
   ImportProgramPayload,
   ImportProgramResult,
   LastExercisePerformance,
+  CardioEntry,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -160,6 +161,25 @@ export const api = {
   ) =>
     request(`/workouts/session-exercises/${sessionExerciseId}/sets`, {
       method: "POST",
+      body: JSON.stringify(body),
+    }),
+  upsertCardioEntry: (
+    sessionExerciseId: string,
+    body: {
+      durationSec?: number;
+      distanceKm?: number;
+      calories?: number;
+      speedKmh?: number;
+      inclinePercent?: number;
+      avgHeartRate?: number;
+      maxHeartRate?: number;
+      watts?: number;
+      rpm?: number;
+      notes?: string;
+    },
+  ) =>
+    request<CardioEntry>(`/workouts/session-exercises/${sessionExerciseId}/cardio-entry`, {
+      method: "PUT",
       body: JSON.stringify(body),
     }),
   progress: () => request<Progress>("/progress"),
