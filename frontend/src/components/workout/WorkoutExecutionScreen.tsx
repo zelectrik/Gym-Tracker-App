@@ -315,7 +315,8 @@ function isAssistedBasedExercise(exercise: SessionExercise) {
 }
 
 function getSetVolume(set: ExerciseSet, exercise: SessionExercise) {
-  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise)) return 0;
+  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise))
+    return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
@@ -350,7 +351,8 @@ function hasStrongDrop(sets: ExerciseSet[], exercise: SessionExercise) {
 }
 
 function hasWeightDrop(sets: ExerciseSet[], exercise: SessionExercise) {
-  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise)) return false;
+  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise))
+    return false;
 
   const weights = sets
     .map((set) => set.weightKg ?? 0)
@@ -667,12 +669,16 @@ function WorkoutSummaryScreen({
                       {summary.completedSets.length}/{summary.plannedSets}{" "}
                       séries
                       {isCardioBasedExercise(summary.exercise)
-                        ? (formatCardioEntry(summary.exercise.cardioEntry) ? ` · ${formatCardioEntry(summary.exercise.cardioEntry)}` : "")
+                        ? formatCardioEntry(summary.exercise.cardioEntry)
+                          ? ` · ${formatCardioEntry(summary.exercise.cardioEntry)}`
+                          : ""
                         : ""}
-                      {!isCardioBasedExercise(summary.exercise) && summary.volumeKg > 0
+                      {!isCardioBasedExercise(summary.exercise) &&
+                      summary.volumeKg > 0
                         ? ` · ${Math.round(summary.volumeKg)} kg`
                         : ""}
-                      {!isCardioBasedExercise(summary.exercise) && summary.durationSec
+                      {!isCardioBasedExercise(summary.exercise) &&
+                      summary.durationSec
                         ? ` · ${formatDuration(summary.durationSec)}`
                         : ""}
                     </span>
@@ -1105,7 +1111,6 @@ function ExerciseExecutionView({
   );
 }
 
-
 function isTreadmillExercise(exercise: SessionExercise) {
   const name = exercise.exercise.name.toLowerCase();
   return (
@@ -1118,7 +1123,9 @@ function isTreadmillExercise(exercise: SessionExercise) {
 
 function isBikeExercise(exercise: SessionExercise) {
   const name = exercise.exercise.name.toLowerCase();
-  return name.includes("vélo") || name.includes("velo") || name.includes("bike");
+  return (
+    name.includes("vélo") || name.includes("velo") || name.includes("bike")
+  );
 }
 
 function isRowerExercise(exercise: SessionExercise) {
@@ -1147,10 +1154,14 @@ function CardioExecutionView({
   const isRower = isRowerExercise(exercise);
 
   const [durationMin, setDurationMin] = useState(
-    Math.round((existing?.durationSec ?? exercise.targetDurationSec ?? 1800) / 60),
+    Math.round(
+      (existing?.durationSec ?? exercise.targetDurationSec ?? 1800) / 60,
+    ),
   );
   const [distanceKm, setDistanceKm] = useState(existing?.distanceKm ?? 0);
-  const [speedKmh, setSpeedKmh] = useState(existing?.speedKmh ?? (isTreadmill ? 3.2 : 0));
+  const [speedKmh, setSpeedKmh] = useState(
+    existing?.speedKmh ?? (isTreadmill ? 3.2 : 0),
+  );
   const [inclinePercent, setInclinePercent] = useState(
     existing?.inclinePercent ?? (isTreadmill ? 15 : 0),
   );
@@ -1186,7 +1197,7 @@ function CardioExecutionView({
           <div className="exercise-progress">Cardio</div>
         </header>
 
-        <main className="one-page-main exercise-step-main cardio-step-main">
+        <main className="one-page-main exercise-step-main cardio-step-main cardio-main">
           <div className="exercise-step-title">
             <h2>{exercise.exercise.name}</h2>
             <span>
@@ -1272,39 +1283,40 @@ function CardioExecutionView({
               </>
             )}
 
-            <label>
-              FC moy.
-              <input
-                type="number"
-                min="0"
-                value={avgHeartRate}
-                onChange={(e) => setAvgHeartRate(Number(e.target.value))}
-              />
-            </label>
+            <details className="cardio-advanced">
+              <summary>Plus d'informations</summary>
 
-            <label>
-              FC max
-              <input
-                type="number"
-                min="0"
-                value={maxHeartRate}
-                onChange={(e) => setMaxHeartRate(Number(e.target.value))}
-              />
-            </label>
+              <label>
+                FC moy.
+                <input
+                  type="number"
+                  value={avgHeartRate}
+                  onChange={(e) => setAvgHeartRate(Number(e.target.value))}
+                />
+              </label>
 
-            <label>
-              Calories
-              <input
-                type="number"
-                min="0"
-                value={calories}
-                onChange={(e) => setCalories(Number(e.target.value))}
-              />
-            </label>
+              <label>
+                FC max
+                <input
+                  type="number"
+                  value={maxHeartRate}
+                  onChange={(e) => setMaxHeartRate(Number(e.target.value))}
+                />
+              </label>
+
+              <label>
+                Calories
+                <input
+                  type="number"
+                  value={calories}
+                  onChange={(e) => setCalories(Number(e.target.value))}
+                />
+              </label>
+            </details>
           </div>
         </main>
 
-        <footer className="one-page-footer execution-footer">
+        <footer className="one-page-footer execution-footer cardio-footer">
           <button
             className="primary fullscreen-button"
             onClick={saveAndComplete}
@@ -1317,7 +1329,6 @@ function CardioExecutionView({
     </section>
   );
 }
-
 
 function PerformanceContext({
   exercise,

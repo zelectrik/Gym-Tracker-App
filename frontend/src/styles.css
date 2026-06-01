@@ -1074,6 +1074,21 @@ code {
   background: #f0fdf4;
 }
 
+.cardio-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 120px;
+}
+
+.cardio-footer {
+  flex-shrink: 0;
+}
+
+.cardio-advanced {
+  margin-top: 16px;
+}
+
 @media (max-height: 760px) {
   .performance-card {
     padding: 8px 10px;
@@ -1196,14 +1211,13 @@ code {
 }
 
 .summary-exercise-item.skipped {
-  opacity: .65;
+  opacity: 0.65;
 }
 
 .summary-footer {
   display: grid;
   gap: 10px;
 }
-
 
 .cardio-step-main {
   justify-content: flex-start;
