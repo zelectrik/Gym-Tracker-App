@@ -62,6 +62,7 @@ export type ExerciseType =
   | "cable"
   | "bodyweight"
   | "cardio";
+export type ProgressionType = "WEIGHT" | "ASSISTED_WEIGHT" | "DURATION";
 export type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
 export type ExecutionMode = "BILATERAL" | "LEFT_RIGHT";
 
@@ -76,6 +77,7 @@ export type Exercise = {
   name: string;
   muscleGroup: MuscleGroup;
   type: ExerciseType;
+  progressionType: ProgressionType;
   muscles: MuscleTag[];
   description?: string | null;
   createdAt?: string;

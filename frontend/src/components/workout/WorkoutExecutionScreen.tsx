@@ -301,34 +301,28 @@ function getCompletedSets(exercise: SessionExercise) {
   return exercise.sets.filter((set) => set.completed);
 }
 
-function isDurationExercise(exercise: SessionExercise) {
-  return Boolean(exercise.targetDurationSec);
+function isDurationBasedExercise(exercise: SessionExercise) {
+  return exercise.exercise.progressionType === "DURATION";
 }
 
-function isAssistedExercise(exercise: SessionExercise) {
-  const name = exercise.exercise.name.toLowerCase();
-
-  return (
-    name.includes("assist") ||
-    name.includes("assisté") ||
-    name.includes("assistée")
-  );
+function isAssistedBasedExercise(exercise: SessionExercise) {
+  return exercise.exercise.progressionType === "ASSISTED_WEIGHT";
 }
 
 function getSetVolume(set: ExerciseSet, exercise: SessionExercise) {
-  if (isDurationExercise(exercise)) return 0;
+  if (isDurationBasedExercise(exercise)) return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
 function getSetEffortValue(set: ExerciseSet, exercise: SessionExercise) {
-  if (isDurationExercise(exercise)) {
+  if (isDurationBasedExercise(exercise)) {
     return set.durationSec ?? 0;
   }
 
   const reps = set.reps ?? 0;
   const weight = set.weightKg ?? 0;
 
-  if (isAssistedExercise(exercise)) {
+  if (isAssistedBasedExercise(exercise)) {
     return reps * Math.max(0, 100 - weight);
   }
 
@@ -347,7 +341,7 @@ function hasStrongDrop(sets: ExerciseSet[], exercise: SessionExercise) {
 }
 
 function hasWeightDrop(sets: ExerciseSet[], exercise: SessionExercise) {
-  if (isDurationExercise(exercise)) return false;
+  if (isDurationBasedExercise(exercise)) return false;
 
   const weights = sets
     .map((set) => set.weightKg ?? 0)
@@ -355,7 +349,7 @@ function hasWeightDrop(sets: ExerciseSet[], exercise: SessionExercise) {
 
   if (weights.length < 2) return false;
 
-  if (isAssistedExercise(exercise)) {
+  if (isAssistedBasedExercise(exercise)) {
     return weights[weights.length - 1] > weights[0];
   }
 
@@ -400,8 +394,8 @@ function analyzeExercisePerformance({
   const strongDrop = hasStrongDrop(completedSets, exercise);
   const repsDrop = hasRepsDrop(completedSets);
   const weightDrop = hasWeightDrop(completedSets, exercise);
-  const assisted = isAssistedExercise(exercise);
-  const duration = isDurationExercise(exercise);
+  const assisted = isAssistedBasedExercise(exercise);
+  const duration = isDurationBasedExercise(exercise);
 
   if (strongDrop || (repsDrop && weightDrop)) {
     return {
@@ -736,7 +730,7 @@ function ExerciseExecutionView({
   onExerciseFinished: () => void;
   onRefresh: () => void;
 }) {
-  const isDurationExercise = Boolean(exercise.targetDurationSec);
+  const isDurationExercise = isDurationBasedExercise(exercise);
   const isLeftRight = Boolean(currentGroup.left || currentGroup.right);
 
   const [bothReps, setBothReps] = useState(

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { MuscleGroup } from "@prisma/client";
+import { MuscleGroup, ProgressionType } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 
 const muscleTags = [
@@ -36,6 +36,7 @@ type MuscleTag = (typeof muscleTags)[number];
 type SeedExercise = {
   name: string;
   type: "machine" | "dumbbell" | "barbell" | "cable" | "bodyweight" | "cardio";
+  progressionType?: ProgressionType;
   muscles: MuscleTag[];
 };
 
@@ -275,18 +276,31 @@ const getPrimaryMuscleGroup = (exercise: SeedExercise): MuscleGroup => {
 
 const normalizeName = (name: string) => name.trim().toLowerCase();
 
+function getProgressionType(exercise: SeedExercise): ProgressionType {
+  if (exercise.progressionType) return exercise.progressionType;
+
+  const name = normalizeName(exercise.name);
+
+  if (name.includes("assist")) return "ASSISTED_WEIGHT";
+  if (name.includes("gainage") || exercise.type === "cardio") return "DURATION";
+
+  return "WEIGHT";
+}
+
 async function main() {
   for (const exercise of exercises) {
     await prisma.exercise.upsert({
       where: { name: normalizeName(exercise.name) },
       update: {
         type: exercise.type,
+        progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },
       create: {
         name: normalizeName(exercise.name),
         type: exercise.type,
+        progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },

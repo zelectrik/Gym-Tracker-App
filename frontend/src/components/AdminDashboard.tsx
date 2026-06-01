@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { Exercise, MuscleGroup } from "../types";
+import type { Exercise, MuscleGroup, ProgressionType } from "../types";
 import { ExerciseList } from "./ExerciseList";
 
 const muscleGroups: MuscleGroup[] = [
@@ -29,10 +29,17 @@ const muscleGroups: MuscleGroup[] = [
   "FULL_BODY",
 ];
 
+const progressionTypes: ProgressionType[] = [
+  "WEIGHT",
+  "ASSISTED_WEIGHT",
+  "DURATION",
+];
+
 export function AdminDashboard() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [name, setName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>("CHEST");
+  const [progressionType, setProgressionType] = useState<ProgressionType>("WEIGHT");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
 
@@ -51,10 +58,12 @@ export function AdminDashboard() {
     await api.createExercise({
       name,
       muscleGroup,
+      progressionType,
       description: description || undefined,
     });
 
     setName("");
+    setProgressionType("WEIGHT");
     setDescription("");
     setMessage("Exercice ajouté dans la base générale.");
 
@@ -99,6 +108,18 @@ export function AdminDashboard() {
             >
               {muscleGroups.map((group) => (
                 <option key={group}>{group}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Type de progression
+            <select
+              value={progressionType}
+              onChange={(e) => setProgressionType(e.target.value as ProgressionType)}
+            >
+              {progressionTypes.map((type) => (
+                <option key={type}>{type}</option>
               ))}
             </select>
           </label>

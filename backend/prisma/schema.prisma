@@ -55,6 +55,12 @@ enum ExecutionMode {
   LEFT_RIGHT
 }
 
+enum ProgressionType {
+  WEIGHT
+  ASSISTED_WEIGHT
+  DURATION
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -73,8 +79,9 @@ model Exercise {
   id          String      @id @default(uuid())
   name        String      @unique
   muscleGroup MuscleGroup
-  type        String      @default("machine")
-  muscles     String[]    @default([])
+  type            String          @default("machine")
+  progressionType ProgressionType @default(WEIGHT)
+  muscles         String[]        @default([])
   description String?
 
   createdAt DateTime @default(now())

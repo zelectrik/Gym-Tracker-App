@@ -23,9 +23,7 @@ export function ExerciseTable({
     (set) => set.completed,
   ).length;
 
-  const isDurationExercise = Boolean(
-    exercise.targetDurationSec,
-  );
+  const isDurationExercise = exercise.exercise.progressionType === "DURATION";
 
   return (
     <article className="logger">

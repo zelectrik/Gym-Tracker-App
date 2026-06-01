@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, ProgressionType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 export type MuscleTag =
@@ -33,6 +33,7 @@ type CreateExerciseInput = {
   name: string;
   muscleGroup: any;
   type?: string;
+  progressionType?: ProgressionType;
   muscles?: MuscleTag[];
   description?: string;
 };
@@ -44,6 +45,7 @@ export const createExercise = async (data: CreateExerciseInput) => {
         name: data.name.trim().toLowerCase(),
         muscleGroup: data.muscleGroup,
         type: data.type ?? "machine",
+        progressionType: data.progressionType ?? "WEIGHT",
         muscles: data.muscles ?? [],
         description: data.description,
       },

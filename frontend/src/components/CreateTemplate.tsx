@@ -101,12 +101,18 @@ export function CreateTemplate({
           <select
             onChange={(e) => {
               if (e.target.value) {
+                const selectedExercise = exercises.find(
+                  (exercise) => exercise.id === e.target.value,
+                );
+                const isDurationExercise = selectedExercise?.progressionType === "DURATION";
+
                 setSelected([
                   ...selected,
                   {
                     exerciseId: e.target.value,
                     targetSets: 3,
-                    targetReps: 10,
+                    targetReps: isDurationExercise ? 0 : 10,
+                    targetDurationSec: isDurationExercise ? 30 : undefined,
                     executionMode: "BILATERAL",
                     targetWeightKg: 0,
                     leftWeightKg: 0,
@@ -135,9 +141,7 @@ export function CreateTemplate({
               (candidate) => candidate.id === item.exerciseId,
             );
 
-            const isDurationExercise = exercise?.name
-              .toLowerCase()
-              .includes("gainage");
+            const isDurationExercise = exercise?.progressionType === "DURATION";
 
             return (
               <article className="planned-line" key={item.exerciseId}>
