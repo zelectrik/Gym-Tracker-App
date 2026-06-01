@@ -4,6 +4,7 @@ import type {
   ExecutionMode,
   MuscleGroup,
   Progress,
+  ProgressionType,
   User,
   WorkoutSession,
   WorkoutStatus,
@@ -69,6 +70,7 @@ export const api = {
   createExercise: (body: {
     name: string;
     muscleGroup: MuscleGroup;
+    progressionType?: ProgressionType;
     description?: string;
   }) =>
     request<Exercise>("/exercises", {

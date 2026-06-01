@@ -9,7 +9,7 @@ export function ExerciseList({ exercises }: { exercises: Exercise[] }) {
         {exercises.map((ex) => (
           <div key={ex.id}>
             <b>{ex.name}</b>
-            <span>{ex.muscleGroup}</span>
+            <span>{ex.muscleGroup} · {ex.progressionType}</span>
           </div>
         ))}
       </div>

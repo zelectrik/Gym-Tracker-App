@@ -42,12 +42,14 @@ export const muscleTags = [
   "abdominaux",
   "obliques",
   "lombaires",
+  "bas_dos",
   "quadriceps",
   "ischios",
   "fessiers",
   "mollets",
   "adducteurs",
   "abducteurs",
+  "jambes",
   "cardio",
   "core",
   "full_body",
@@ -62,10 +64,17 @@ export const exerciseTypes = [
   "cardio",
 ] as const;
 
+export const progressionTypes = [
+  "WEIGHT",
+  "ASSISTED_WEIGHT",
+  "DURATION",
+] as const;
+
 export const createExerciseSchema = z.object({
   name: z.string().trim().min(1),
   muscleGroup: z.enum(muscleGroups),
   type: z.enum(exerciseTypes).default("machine"),
+  progressionType: z.enum(progressionTypes).default("WEIGHT"),
   muscles: z.array(z.enum(muscleTags)).default([]),
   description: z.string().trim().optional(),
 });

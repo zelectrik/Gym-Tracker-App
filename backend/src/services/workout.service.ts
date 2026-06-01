@@ -1,4 +1,4 @@
-import { MuscleGroup, Prisma } from "@prisma/client";
+import { MuscleGroup, Prisma, ProgressionType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
@@ -165,6 +165,20 @@ function rangeLabel(
   return `${label}: ${value[0]}-${value[1]}`;
 }
 
+
+function getProgressionTypeFromImport(exercise: ImportedProgramExercise): ProgressionType {
+  const normalizedName = normalizeLookup(exercise.exerciseName);
+  const normalizedReference = exercise.reference ? normalizeLookup(exercise.reference) : "";
+
+  if (exercise.durationSeconds !== undefined) return "DURATION";
+  if (exercise.category === "cardio") return "DURATION";
+  if (normalizedName.includes("assist") || normalizedReference.includes("assist")) {
+    return "ASSISTED_WEIGHT";
+  }
+
+  return "WEIGHT";
+}
+
 function buildImportNotes(exercise: ImportedProgramExercise) {
   const parts = [
     exercise.reference ? `Référence: ${exercise.reference}` : undefined,
@@ -196,16 +210,28 @@ async function findOrCreateExerciseFromImport(
     .filter(Boolean)
     .map((name) => normalizeName(name as string));
 
+  const progressionType = getProgressionTypeFromImport(exercise);
+
   const existing = await prisma.exercise.findFirst({
     where: { name: { in: candidateNames } },
   });
 
-  if (existing) return existing;
+  if (existing) {
+    if (existing.progressionType !== progressionType) {
+      return prisma.exercise.update({
+        where: { id: existing.id },
+        data: { progressionType },
+      });
+    }
+
+    return existing;
+  }
 
   return prisma.exercise.create({
     data: {
       name: normalizeName(exercise.exerciseName),
       type: exercise.category ?? "machine",
+      progressionType,
       muscles: exercise.muscles?.map(normalizeMuscleTag) ?? [],
       muscleGroup: getPrimaryMuscleGroup(exercise.muscles, exercise.category),
       description: buildImportNotes(exercise),
