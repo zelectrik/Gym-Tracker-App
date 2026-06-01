@@ -293,14 +293,16 @@ async function main() {
       where: { name: normalizeName(exercise.name) },
       update: {
         type: exercise.type,
-        progressionType: getProgressionType(exercise),
+        trackingType: "STRENGTH",
+    progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },
       create: {
         name: normalizeName(exercise.name),
         type: exercise.type,
-        progressionType: getProgressionType(exercise),
+        trackingType: "STRENGTH",
+    progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },
