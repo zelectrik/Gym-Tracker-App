@@ -1,5 +1,9 @@
 import "dotenv/config";
-import { MuscleGroup, ProgressionType } from "@prisma/client";
+import {
+  ExerciseTrackingType,
+  MuscleGroup,
+  ProgressionType,
+} from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 
 const muscleTags = [
@@ -287,22 +291,30 @@ function getProgressionType(exercise: SeedExercise): ProgressionType {
   return "WEIGHT";
 }
 
+function getTrackingType(exercise: SeedExercise): ExerciseTrackingType {
+  if (exercise.type === "cardio") {
+    return "CARDIO";
+  }
+
+  return "STRENGTH";
+}
+
 async function main() {
   for (const exercise of exercises) {
     await prisma.exercise.upsert({
       where: { name: normalizeName(exercise.name) },
       update: {
         type: exercise.type,
-        trackingType: "STRENGTH",
-    progressionType: getProgressionType(exercise),
+        trackingType: getTrackingType(exercise),
+        progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },
       create: {
         name: normalizeName(exercise.name),
         type: exercise.type,
-        trackingType: "STRENGTH",
-    progressionType: getProgressionType(exercise),
+        trackingType: getTrackingType(exercise),
+        progressionType: getProgressionType(exercise),
         muscles: exercise.muscles,
         muscleGroup: getPrimaryMuscleGroup(exercise),
       },

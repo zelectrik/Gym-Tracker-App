@@ -731,6 +731,7 @@ function ExerciseExecutionView({
   onRefresh: () => void;
 }) {
   const isDurationExercise = isDurationBasedExercise(exercise);
+  const isCardioExercise = exercise.exercise.trackingType === "CARDIO";
   const isLeftRight = Boolean(currentGroup.left || currentGroup.right);
 
   const [bothReps, setBothReps] = useState(
@@ -972,6 +973,34 @@ function ExerciseExecutionView({
     } finally {
       setSaving(false);
     }
+  }
+
+  if (isCardioExercise) {
+    return (
+      <section className="mobile-workout-screen focus-workout-screen">
+        <div className="mobile-workout-card one-page-card">
+          <header className="focus-header compact-focus-header">
+            <button className="back-button" onClick={onBack}>
+              ← Liste
+            </button>
+          </header>
+
+          <main className="one-page-main centered-focus-message">
+            <h2>{exercise.exercise.name}</h2>
+            <p>Suivi cardio bientôt disponible</p>
+          </main>
+
+          <footer className="one-page-footer">
+            <button
+              className="primary fullscreen-button"
+              onClick={finishExerciseEarly}
+            >
+              Terminer exercice
+            </button>
+          </footer>
+        </div>
+      </section>
+    );
   }
 
   return (
