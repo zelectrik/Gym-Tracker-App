@@ -301,34 +301,63 @@ function getCompletedSets(exercise: SessionExercise) {
   return exercise.sets.filter((set) => set.completed);
 }
 
-function getSetVolume(set: ExerciseSet) {
+function isDurationExercise(exercise: SessionExercise) {
+  return Boolean(exercise.targetDurationSec);
+}
+
+function isAssistedExercise(exercise: SessionExercise) {
+  const name = exercise.exercise.name.toLowerCase();
+
+  return (
+    name.includes("assist") ||
+    name.includes("assisté") ||
+    name.includes("assistée")
+  );
+}
+
+function getSetVolume(set: ExerciseSet, exercise: SessionExercise) {
+  if (isDurationExercise(exercise)) return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
-function getSetEffortValue(set: ExerciseSet) {
-  if (set.durationSec) return set.durationSec;
-  return getSetVolume(set);
+function getSetEffortValue(set: ExerciseSet, exercise: SessionExercise) {
+  if (isDurationExercise(exercise)) {
+    return set.durationSec ?? 0;
+  }
+
+  const reps = set.reps ?? 0;
+  const weight = set.weightKg ?? 0;
+
+  if (isAssistedExercise(exercise)) {
+    return reps * Math.max(0, 100 - weight);
+  }
+
+  return reps * weight;
 }
 
-function hasStrongDrop(sets: ExerciseSet[]) {
+function hasStrongDrop(sets: ExerciseSet[], exercise: SessionExercise) {
   if (sets.length < 2) return false;
 
-  const first = getSetEffortValue(sets[0]);
-  const last = getSetEffortValue(sets[sets.length - 1]);
+  const first = getSetEffortValue(sets[0], exercise);
+  const last = getSetEffortValue(sets[sets.length - 1], exercise);
 
   if (!first) return false;
 
-  const dropRatio = (first - last) / first;
-
-  return dropRatio >= 0.18;
+  return (first - last) / first >= 0.18;
 }
 
-function hasWeightDrop(sets: ExerciseSet[]) {
+function hasWeightDrop(sets: ExerciseSet[], exercise: SessionExercise) {
+  if (isDurationExercise(exercise)) return false;
+
   const weights = sets
     .map((set) => set.weightKg ?? 0)
     .filter((weight) => weight > 0);
 
   if (weights.length < 2) return false;
+
+  if (isAssistedExercise(exercise)) {
+    return weights[weights.length - 1] > weights[0];
+  }
 
   return weights[weights.length - 1] < weights[0];
 }
@@ -342,9 +371,11 @@ function hasRepsDrop(sets: ExerciseSet[]) {
 }
 
 function analyzeExercisePerformance({
+  exercise,
   completedSets,
   plannedSets,
 }: {
+  exercise: SessionExercise;
   completedSets: ExerciseSet[];
   plannedSets: number;
 }) {
@@ -362,20 +393,25 @@ function analyzeExercisePerformance({
       performance: "hard" as const,
       label: "Partiel",
       advice:
-        "Exercice terminé avant la fin. Garde les mêmes objectifs avant de monter la charge.",
+        "Exercice terminé avant la fin. Garde les mêmes objectifs avant de monter la difficulté.",
     };
   }
 
-  const strongDrop = hasStrongDrop(completedSets);
+  const strongDrop = hasStrongDrop(completedSets, exercise);
   const repsDrop = hasRepsDrop(completedSets);
-  const weightDrop = hasWeightDrop(completedSets);
+  const weightDrop = hasWeightDrop(completedSets, exercise);
+  const assisted = isAssistedExercise(exercise);
+  const duration = isDurationExercise(exercise);
 
   if (strongDrop || (repsDrop && weightDrop)) {
     return {
       performance: "hard" as const,
       label: "Difficile",
-      advice:
-        "Baisse visible sur les séries. Garde le même poids ou baisse légèrement pour valider proprement.",
+      advice: duration
+        ? "La durée baisse nettement sur les séries. Garde la même durée avant d’augmenter."
+        : assisted
+          ? "La performance baisse ou l’assistance augmente. Garde le même niveau d’assistance avant de réduire."
+          : "Baisse visible sur les séries. Garde le même poids ou baisse légèrement pour valider proprement.",
     };
   }
 
@@ -383,26 +419,34 @@ function analyzeExercisePerformance({
     return {
       performance: "ok" as const,
       label: "Correct",
-      advice:
-        "Exercice validé, mais avec une légère baisse. Essaie de stabiliser toutes les séries.",
+      advice: duration
+        ? "Exercice validé, mais la durée baisse un peu. Essaie de stabiliser toutes les séries."
+        : assisted
+          ? "Exercice validé, mais attention à ne pas remonter l’assistance."
+          : "Exercice validé, mais avec une légère baisse. Essaie de stabiliser toutes les séries.",
     };
   }
 
   return {
     performance: "good" as const,
     label: "Solide",
-    advice:
-      "Performance stable. Si les sensations étaient bonnes, tu peux tenter +1 rep ou +1 à +2,5 kg.",
+    advice: duration
+      ? "Durée stable. Tu peux tenter quelques secondes de plus la prochaine fois."
+      : assisted
+        ? "Performance stable. Si les sensations étaient bonnes, tu peux réduire légèrement l’assistance."
+        : "Performance stable. Si les sensations étaient bonnes, tu peux tenter +1 rep ou +1 à +2,5 kg.",
   };
 }
 
 function buildExerciseSummary(exercise: SessionExercise): ExerciseSummary {
   const completedSets = getCompletedSets(exercise);
   const plannedSets = exercise.sets.length;
+
   const volumeKg = completedSets.reduce(
-    (sum, set) => sum + getSetVolume(set),
+    (sum, set) => sum + getSetVolume(set, exercise),
     0,
   );
+
   const durationSec = completedSets.reduce(
     (sum, set) => sum + (set.durationSec ?? 0),
     0,
@@ -416,6 +460,7 @@ function buildExerciseSummary(exercise: SessionExercise): ExerciseSummary {
         : "partial";
 
   const analysis = analyzeExercisePerformance({
+    exercise,
     completedSets,
     plannedSets,
   });
@@ -592,7 +637,10 @@ function WorkoutSummaryScreen({
                     <strong>{summary.exercise.exercise.name}</strong>
                     <span>
                       {summary.completedSets.length}/{summary.plannedSets}{" "}
-                      séries · {Math.round(summary.volumeKg)} kg
+                      séries
+                      {summary.volumeKg > 0
+                        ? ` · ${Math.round(summary.volumeKg)} kg`
+                        : ""}
                       {summary.durationSec
                         ? ` · ${formatDuration(summary.durationSec)}`
                         : ""}
