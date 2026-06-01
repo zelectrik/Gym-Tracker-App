@@ -77,6 +77,7 @@ export type Exercise = {
   name: string;
   muscleGroup: MuscleGroup;
   type: ExerciseType;
+  trackingType: ExerciseTrackingType;
   progressionType: ProgressionType;
   muscles: MuscleTag[];
   description?: string | null;
@@ -188,3 +189,5 @@ export type LastExercisePerformance = {
     distanceMeters?: number | null;
   }>;
 };
+
+export type ExerciseTrackingType = "STRENGTH" | "CARDIO";

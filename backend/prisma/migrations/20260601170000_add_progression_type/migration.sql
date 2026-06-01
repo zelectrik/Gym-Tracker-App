@@ -9,5 +9,4 @@ WHERE LOWER("name") LIKE '%assist%';
 
 UPDATE "Exercise"
 SET "progressionType" = 'DURATION'
-WHERE LOWER("name") LIKE '%gainage%'
-   OR "type" = 'cardio';
+WHERE LOWER("name") LIKE '%gainage%';
