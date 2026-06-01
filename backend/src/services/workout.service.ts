@@ -4,6 +4,19 @@ import { prisma } from "../lib/prisma";
 type ExerciseSide = "BOTH" | "LEFT" | "RIGHT";
 type ExecutionMode = "BILATERAL" | "LEFT_RIGHT";
 
+type CardioEntryInput = {
+  durationSec?: number | null;
+  distanceKm?: number | null;
+  calories?: number | null;
+  speedKmh?: number | null;
+  inclinePercent?: number | null;
+  avgHeartRate?: number | null;
+  maxHeartRate?: number | null;
+  watts?: number | null;
+  rpm?: number | null;
+  notes?: string | null;
+};
+
 type PlannedExerciseInput = {
   exerciseId: string;
   position: number;
@@ -63,6 +76,7 @@ const includeSession = {
       sets: {
         orderBy: [{ setNumber: "asc" as const }, { side: "asc" as const }],
       },
+      cardioEntry: true,
     },
     orderBy: { position: "asc" as const },
   },
@@ -433,6 +447,7 @@ export const getLastExercisePerformance = async (userId: string, exerciseId: str
         where: { completed: true },
         orderBy: [{ setNumber: "asc" }, { side: "asc" }],
       },
+      cardioEntry: true,
       session: {
         select: {
           id: true,
@@ -464,6 +479,7 @@ export const getLastExercisePerformance = async (userId: string, exerciseId: str
       durationSec: set.durationSec,
       distanceMeters: set.distanceMeters,
     })),
+    cardioEntry: lastSessionExercise.cardioEntry,
   };
 };
 
@@ -499,6 +515,37 @@ export const addSet = (sessionExerciseId: string, data: any) =>
     },
     update: { ...data, side: data.side ?? "BOTH" },
     create: { ...data, side: data.side ?? "BOTH", sessionExerciseId },
+  });
+
+
+export const upsertCardioEntry = (sessionExerciseId: string, data: CardioEntryInput) =>
+  prisma.cardioEntry.upsert({
+    where: { sessionExerciseId },
+    update: {
+      durationSec: data.durationSec ?? undefined,
+      distanceKm: data.distanceKm ?? undefined,
+      calories: data.calories ?? undefined,
+      speedKmh: data.speedKmh ?? undefined,
+      inclinePercent: data.inclinePercent ?? undefined,
+      avgHeartRate: data.avgHeartRate ?? undefined,
+      maxHeartRate: data.maxHeartRate ?? undefined,
+      watts: data.watts ?? undefined,
+      rpm: data.rpm ?? undefined,
+      notes: data.notes ?? undefined,
+    },
+    create: {
+      sessionExerciseId,
+      durationSec: data.durationSec ?? undefined,
+      distanceKm: data.distanceKm ?? undefined,
+      calories: data.calories ?? undefined,
+      speedKmh: data.speedKmh ?? undefined,
+      inclinePercent: data.inclinePercent ?? undefined,
+      avgHeartRate: data.avgHeartRate ?? undefined,
+      maxHeartRate: data.maxHeartRate ?? undefined,
+      watts: data.watts ?? undefined,
+      rpm: data.rpm ?? undefined,
+      notes: data.notes ?? undefined,
+    },
   });
 
 export const updateTemplate = async (

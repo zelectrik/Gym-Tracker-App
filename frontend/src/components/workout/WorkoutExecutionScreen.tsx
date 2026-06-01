@@ -4,6 +4,7 @@ import type {
   ExerciseSet,
   ExerciseSide,
   LastExercisePerformance,
+  CardioEntry,
   SessionExercise,
   WorkoutSession,
 } from "../../types";
@@ -305,16 +306,24 @@ function isDurationBasedExercise(exercise: SessionExercise) {
   return exercise.exercise.progressionType === "DURATION";
 }
 
+function isCardioBasedExercise(exercise: SessionExercise) {
+  return exercise.exercise.trackingType === "CARDIO";
+}
+
 function isAssistedBasedExercise(exercise: SessionExercise) {
   return exercise.exercise.progressionType === "ASSISTED_WEIGHT";
 }
 
 function getSetVolume(set: ExerciseSet, exercise: SessionExercise) {
-  if (isDurationBasedExercise(exercise)) return 0;
+  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise)) return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
 function getSetEffortValue(set: ExerciseSet, exercise: SessionExercise) {
+  if (isCardioBasedExercise(exercise)) {
+    return exercise.cardioEntry?.durationSec ?? set.durationSec ?? 0;
+  }
+
   if (isDurationBasedExercise(exercise)) {
     return set.durationSec ?? 0;
   }
@@ -341,7 +350,7 @@ function hasStrongDrop(sets: ExerciseSet[], exercise: SessionExercise) {
 }
 
 function hasWeightDrop(sets: ExerciseSet[], exercise: SessionExercise) {
-  if (isDurationBasedExercise(exercise)) return false;
+  if (isDurationBasedExercise(exercise) || isCardioBasedExercise(exercise)) return false;
 
   const weights = sets
     .map((set) => set.weightKg ?? 0)
@@ -388,6 +397,15 @@ function analyzeExercisePerformance({
       label: "Partiel",
       advice:
         "Exercice terminé avant la fin. Garde les mêmes objectifs avant de monter la difficulté.",
+    };
+  }
+
+  if (isCardioBasedExercise(exercise)) {
+    return {
+      performance: "good" as const,
+      label: "Cardio validé",
+      advice:
+        "Cardio enregistré. Tu pourras comparer la durée, la distance, la vitesse et l’inclinaison sur les prochaines séances.",
     };
   }
 
@@ -441,10 +459,9 @@ function buildExerciseSummary(exercise: SessionExercise): ExerciseSummary {
     0,
   );
 
-  const durationSec = completedSets.reduce(
-    (sum, set) => sum + (set.durationSec ?? 0),
-    0,
-  );
+  const durationSec = isCardioBasedExercise(exercise)
+    ? (exercise.cardioEntry?.durationSec ?? 0)
+    : completedSets.reduce((sum, set) => sum + (set.durationSec ?? 0), 0);
 
   const status =
     completedSets.length === 0
@@ -477,6 +494,23 @@ function formatDuration(totalSeconds: number) {
   const seconds = totalSeconds % 60;
   if (!minutes) return `${seconds} sec`;
   return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
+}
+
+function formatCardioEntry(entry?: CardioEntry | null) {
+  if (!entry) return "";
+
+  const parts = [
+    entry.durationSec ? formatDuration(entry.durationSec) : undefined,
+    entry.distanceKm ? `${entry.distanceKm} km` : undefined,
+    entry.speedKmh ? `${entry.speedKmh} km/h` : undefined,
+    entry.inclinePercent ? `${entry.inclinePercent}% inclinaison` : undefined,
+    entry.watts ? `${entry.watts} W` : undefined,
+    entry.rpm ? `${entry.rpm} rpm` : undefined,
+    entry.avgHeartRate ? `${entry.avgHeartRate} bpm moy.` : undefined,
+    entry.calories ? `${entry.calories} kcal` : undefined,
+  ].filter(Boolean);
+
+  return parts.join(" · ");
 }
 
 function formatMuscleLabel(value: string) {
@@ -632,10 +666,13 @@ function WorkoutSummaryScreen({
                     <span>
                       {summary.completedSets.length}/{summary.plannedSets}{" "}
                       séries
-                      {summary.volumeKg > 0
+                      {isCardioBasedExercise(summary.exercise)
+                        ? (formatCardioEntry(summary.exercise.cardioEntry) ? ` · ${formatCardioEntry(summary.exercise.cardioEntry)}` : "")
+                        : ""}
+                      {!isCardioBasedExercise(summary.exercise) && summary.volumeKg > 0
                         ? ` · ${Math.round(summary.volumeKg)} kg`
                         : ""}
-                      {summary.durationSec
+                      {!isCardioBasedExercise(summary.exercise) && summary.durationSec
                         ? ` · ${formatDuration(summary.durationSec)}`
                         : ""}
                     </span>
@@ -977,29 +1014,12 @@ function ExerciseExecutionView({
 
   if (isCardioExercise) {
     return (
-      <section className="mobile-workout-screen focus-workout-screen">
-        <div className="mobile-workout-card one-page-card">
-          <header className="focus-header compact-focus-header">
-            <button className="back-button" onClick={onBack}>
-              ← Liste
-            </button>
-          </header>
-
-          <main className="one-page-main centered-focus-message">
-            <h2>{exercise.exercise.name}</h2>
-            <p>Suivi cardio bientôt disponible</p>
-          </main>
-
-          <footer className="one-page-footer">
-            <button
-              className="primary fullscreen-button"
-              onClick={finishExerciseEarly}
-            >
-              Terminer exercice
-            </button>
-          </footer>
-        </div>
-      </section>
+      <CardioExecutionView
+        exercise={exercise}
+        onBack={onBack}
+        onComplete={finishExerciseEarly}
+        saving={saving}
+      />
     );
   }
 
@@ -1084,6 +1104,220 @@ function ExerciseExecutionView({
     </section>
   );
 }
+
+
+function isTreadmillExercise(exercise: SessionExercise) {
+  const name = exercise.exercise.name.toLowerCase();
+  return (
+    name.includes("tapis") ||
+    name.includes("marche") ||
+    name.includes("course") ||
+    name.includes("treadmill")
+  );
+}
+
+function isBikeExercise(exercise: SessionExercise) {
+  const name = exercise.exercise.name.toLowerCase();
+  return name.includes("vélo") || name.includes("velo") || name.includes("bike");
+}
+
+function isRowerExercise(exercise: SessionExercise) {
+  const name = exercise.exercise.name.toLowerCase();
+  return name.includes("rameur") || name.includes("rower");
+}
+
+function optionalNumber(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function CardioExecutionView({
+  exercise,
+  onBack,
+  onComplete,
+  saving,
+}: {
+  exercise: SessionExercise;
+  onBack: () => void;
+  onComplete: () => Promise<void>;
+  saving: boolean;
+}) {
+  const existing = exercise.cardioEntry;
+  const isTreadmill = isTreadmillExercise(exercise);
+  const isBike = isBikeExercise(exercise);
+  const isRower = isRowerExercise(exercise);
+
+  const [durationMin, setDurationMin] = useState(
+    Math.round((existing?.durationSec ?? exercise.targetDurationSec ?? 1800) / 60),
+  );
+  const [distanceKm, setDistanceKm] = useState(existing?.distanceKm ?? 0);
+  const [speedKmh, setSpeedKmh] = useState(existing?.speedKmh ?? (isTreadmill ? 3.2 : 0));
+  const [inclinePercent, setInclinePercent] = useState(
+    existing?.inclinePercent ?? (isTreadmill ? 15 : 0),
+  );
+  const [watts, setWatts] = useState(existing?.watts ?? 0);
+  const [rpm, setRpm] = useState(existing?.rpm ?? 0);
+  const [avgHeartRate, setAvgHeartRate] = useState(existing?.avgHeartRate ?? 0);
+  const [maxHeartRate, setMaxHeartRate] = useState(existing?.maxHeartRate ?? 0);
+  const [calories, setCalories] = useState(existing?.calories ?? 0);
+
+  async function saveAndComplete() {
+    await api.upsertCardioEntry(exercise.id, {
+      durationSec: Math.max(1, durationMin) * 60,
+      distanceKm: optionalNumber(distanceKm),
+      speedKmh: optionalNumber(speedKmh),
+      inclinePercent: optionalNumber(inclinePercent),
+      watts: optionalNumber(watts),
+      rpm: optionalNumber(rpm),
+      avgHeartRate: optionalNumber(avgHeartRate),
+      maxHeartRate: optionalNumber(maxHeartRate),
+      calories: optionalNumber(calories),
+    });
+
+    await onComplete();
+  }
+
+  return (
+    <section className="mobile-workout-screen focus-workout-screen">
+      <div className="mobile-workout-card one-page-card execution-step-card">
+        <header className="focus-header compact-focus-header">
+          <button className="back-button" onClick={onBack}>
+            ← Liste
+          </button>
+          <div className="exercise-progress">Cardio</div>
+        </header>
+
+        <main className="one-page-main exercise-step-main cardio-step-main">
+          <div className="exercise-step-title">
+            <h2>{exercise.exercise.name}</h2>
+            <span>
+              {isTreadmill
+                ? "Tapis / marche inclinée"
+                : isBike
+                  ? "Vélo"
+                  : isRower
+                    ? "Rameur"
+                    : "Cardio"}
+            </span>
+          </div>
+
+          <div className="cardio-fields">
+            <label>
+              Durée min
+              <input
+                type="number"
+                min="1"
+                value={durationMin}
+                onChange={(e) => setDurationMin(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Distance km
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={distanceKm}
+                onChange={(e) => setDistanceKm(Number(e.target.value))}
+              />
+            </label>
+
+            {isTreadmill && (
+              <>
+                <label>
+                  Vitesse km/h
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={speedKmh}
+                    onChange={(e) => setSpeedKmh(Number(e.target.value))}
+                  />
+                </label>
+
+                <label>
+                  Inclinaison %
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={inclinePercent}
+                    onChange={(e) => setInclinePercent(Number(e.target.value))}
+                  />
+                </label>
+              </>
+            )}
+
+            {(isBike || isRower) && (
+              <>
+                <label>
+                  Watts moy.
+                  <input
+                    type="number"
+                    min="0"
+                    value={watts}
+                    onChange={(e) => setWatts(Number(e.target.value))}
+                  />
+                </label>
+
+                <label>
+                  Cadence rpm
+                  <input
+                    type="number"
+                    min="0"
+                    value={rpm}
+                    onChange={(e) => setRpm(Number(e.target.value))}
+                  />
+                </label>
+              </>
+            )}
+
+            <label>
+              FC moy.
+              <input
+                type="number"
+                min="0"
+                value={avgHeartRate}
+                onChange={(e) => setAvgHeartRate(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              FC max
+              <input
+                type="number"
+                min="0"
+                value={maxHeartRate}
+                onChange={(e) => setMaxHeartRate(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Calories
+              <input
+                type="number"
+                min="0"
+                value={calories}
+                onChange={(e) => setCalories(Number(e.target.value))}
+              />
+            </label>
+          </div>
+        </main>
+
+        <footer className="one-page-footer execution-footer">
+          <button
+            className="primary fullscreen-button"
+            onClick={saveAndComplete}
+            disabled={saving}
+          >
+            Valider cardio
+          </button>
+        </footer>
+      </div>
+    </section>
+  );
+}
+
 
 function PerformanceContext({
   exercise,
@@ -1214,11 +1448,11 @@ function BilateralFields({
     return (
       <div className="execution-fields step-fields">
         <label>
-          Durée min
+          Durée sec
           <input
             type="number"
-            value={Math.round(durationSec / 60)}
-            onChange={(e) => setDurationSec(Number(e.target.value) * 60)}
+            value={durationSec}
+            onChange={(e) => setDurationSec(Number(e.target.value))}
           />
         </label>
       </div>
@@ -1285,16 +1519,16 @@ function LeftRightFields({
         <strong>Gauche</strong>
         <strong>Droite</strong>
 
-        <span>Durée min</span>
+        <span>Durée sec</span>
         <input
           type="number"
-          value={Math.round(leftDurationSec / 60)}
-          onChange={(e) => setLeftDurationSec(Number(e.target.value) * 60)}
+          value={leftDurationSec}
+          onChange={(e) => setLeftDurationSec(Number(e.target.value))}
         />
         <input
           type="number"
-          value={Math.round(rightDurationSec / 60)}
-          onChange={(e) => setRightDurationSec(Number(e.target.value) * 60)}
+          value={rightDurationSec}
+          onChange={(e) => setRightDurationSec(Number(e.target.value))}
         />
       </div>
     );

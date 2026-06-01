@@ -185,10 +185,33 @@ model SessionExercise {
 
   session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise       @relation(fields: [exerciseId], references: [id])
-  sets     ExerciseSet[]
+  sets        ExerciseSet[]
+  cardioEntry CardioEntry?
 
   @@unique([sessionId, position])
   @@index([exerciseId])
+}
+
+
+model CardioEntry {
+  id                String @id @default(uuid())
+  sessionExerciseId String @unique
+
+  durationSec       Int?
+  distanceKm        Float?
+  calories          Int?
+  speedKmh          Float?
+  inclinePercent    Float?
+  avgHeartRate      Int?
+  maxHeartRate      Int?
+  watts             Int?
+  rpm               Int?
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 }
 
 model ExerciseSet {

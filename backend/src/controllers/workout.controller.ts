@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   addSetSchema,
+  cardioEntrySchema,
   createWorkoutSessionSchema,
   createWorkoutTemplateSchema,
   importProgramTemplateSchema,
@@ -8,6 +9,7 @@ import {
 } from "../schemas/workout.schema";
 import {
   addSet,
+  upsertCardioEntry,
   createSession,
   createTemplate,
   updateTemplate,
@@ -64,6 +66,14 @@ export const addSetHandler = async (req: Request, res: Response) => {
   const parsed = addSetSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   return res.status(201).json(await addSet(req.params.sessionExerciseId as string, parsed.data));
+};
+
+export const upsertCardioEntryHandler = async (req: Request, res: Response) => {
+  const parsed = cardioEntrySchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  return res.status(200).json(
+    await upsertCardioEntry(req.params.sessionExerciseId as string, parsed.data),
+  );
 };
 
 

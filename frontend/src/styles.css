@@ -1203,3 +1203,33 @@ code {
   display: grid;
   gap: 10px;
 }
+
+
+.cardio-step-main {
+  justify-content: flex-start;
+}
+
+.cardio-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.cardio-fields label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.cardio-fields input {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 14px;
+  border: 1px solid #dbe4f0;
+  background: #f3f7ff;
+  padding: 0 16px;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
