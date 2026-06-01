@@ -1214,11 +1214,11 @@ function BilateralFields({
     return (
       <div className="execution-fields step-fields">
         <label>
-          Durée
+          Durée min
           <input
             type="number"
-            value={durationSec}
-            onChange={(e) => setDurationSec(Number(e.target.value))}
+            value={Math.round(durationSec / 60)}
+            onChange={(e) => setDurationSec(Number(e.target.value) * 60)}
           />
         </label>
       </div>
@@ -1285,16 +1285,16 @@ function LeftRightFields({
         <strong>Gauche</strong>
         <strong>Droite</strong>
 
-        <span>Durée</span>
+        <span>Durée min</span>
         <input
           type="number"
-          value={leftDurationSec}
-          onChange={(e) => setLeftDurationSec(Number(e.target.value))}
+          value={Math.round(leftDurationSec / 60)}
+          onChange={(e) => setLeftDurationSec(Number(e.target.value) * 60)}
         />
         <input
           type="number"
-          value={rightDurationSec}
-          onChange={(e) => setRightDurationSec(Number(e.target.value))}
+          value={Math.round(rightDurationSec / 60)}
+          onChange={(e) => setRightDurationSec(Number(e.target.value) * 60)}
         />
       </div>
     );

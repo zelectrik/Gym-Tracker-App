@@ -104,7 +104,10 @@ export function CreateTemplate({
                 const selectedExercise = exercises.find(
                   (exercise) => exercise.id === e.target.value,
                 );
-                const isDurationExercise = selectedExercise?.progressionType === "DURATION";
+                const isDurationExercise =
+                  selectedExercise?.progressionType === "DURATION";
+                const isCardioExercise =
+                  selectedExercise?.trackingType === "CARDIO";
 
                 setSelected([
                   ...selected,
@@ -141,6 +144,7 @@ export function CreateTemplate({
               (candidate) => candidate.id === item.exerciseId,
             );
 
+            const isCardioExercise = exercise?.trackingType === "CARDIO";
             const isDurationExercise = exercise?.progressionType === "DURATION";
 
             return (
@@ -182,14 +186,20 @@ export function CreateTemplate({
 
                   {isDurationExercise ? (
                     <label>
-                      Durée sec
+                      {isCardioExercise ? "Durée min" : "Durée sec"}
                       <input
                         type="number"
                         min="1"
-                        value={item.targetDurationSec ?? 30}
+                        value={
+                          isCardioExercise
+                            ? Math.round((item.targetDurationSec ?? 1800) / 60)
+                            : (item.targetDurationSec ?? 30)
+                        }
                         onChange={(e) =>
                           updateDraft(selected, setSelected, item.exerciseId, {
-                            targetDurationSec: Number(e.target.value),
+                            targetDurationSec: isCardioExercise
+                              ? Number(e.target.value) * 60
+                              : Number(e.target.value),
                           })
                         }
                       />
