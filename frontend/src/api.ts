@@ -85,7 +85,23 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  updateTemplate: (templateId: string, body: any) =>
+  updateTemplate: (templateId: string, body: {
+    name: string;
+    description?: string;
+    exercises: Array<{
+      exerciseId: string;
+      position: number;
+      targetSets: number;
+      targetReps?: number;
+      targetDurationSec?: number;
+      restSeconds?: number;
+      executionMode?: ExecutionMode;
+      targetWeightKg?: number;
+      leftWeightKg?: number;
+      rightWeightKg?: number;
+      notes?: string;
+    }>;
+  }) =>
     request<WorkoutTemplate>(`/workouts/templates/${templateId}`, {
       method: "PATCH",
       body: JSON.stringify(body),

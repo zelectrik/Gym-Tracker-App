@@ -1247,3 +1247,46 @@ code {
   font-weight: 800;
   text-align: center;
 }
+
+.editing-template-card {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.template-card-actions,
+.template-line-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.template-card-actions button,
+.template-line-actions button {
+  min-height: 38px;
+}
+
+button.danger,
+.danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+button.danger:hover,
+.danger:hover {
+  background: #fee2e2;
+}
+
+@media (max-width: 780px) {
+  .template-card-actions,
+  .template-line-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .template-card-actions .primary,
+  .template-line-actions button:last-child {
+    grid-column: 1 / -1;
+  }
+}

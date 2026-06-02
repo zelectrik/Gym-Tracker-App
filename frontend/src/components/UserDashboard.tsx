@@ -12,12 +12,24 @@ import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 
+function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
+  if (item.targetDurationSec) {
+    const isCardio = item.exercise.trackingType === "CARDIO";
+    return isCardio
+      ? `${Math.round(item.targetDurationSec / 60)} min`
+      : `${item.targetDurationSec}s`;
+  }
+
+  return `${item.targetReps ?? "?"} reps`;
+}
+
 export function UserDashboard({ user }: { user: User }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [focusMode, setFocusMode] = useState(true);
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
 
@@ -57,6 +69,15 @@ export function UserDashboard({ user }: { user: User }) {
 
     await api.updateSessionStatus(created.id, "IN_PROGRESS");
 
+    refresh();
+  }
+
+  async function deleteTemplate(template: WorkoutTemplate) {
+    const confirmed = confirm(`Supprimer l'entraînement "${template.name}" ?`);
+    if (!confirmed) return;
+
+    await api.deleteTemplate(template.id);
+    if (editingTemplate?.id === template.id) setEditingTemplate(null);
     refresh();
   }
 
@@ -103,12 +124,20 @@ export function UserDashboard({ user }: { user: User }) {
 
       {!active && (
         <>
-          <ImportProgramJson onImported={refresh} />
-          <CreateTemplate exercises={exercises} onCreated={refresh} />
+          {!editingTemplate && <ImportProgramJson onImported={refresh} />}
+          <CreateTemplate
+            exercises={exercises}
+            templateToEdit={editingTemplate}
+            onCancelEdit={() => setEditingTemplate(null)}
+            onCreated={() => {
+              setEditingTemplate(null);
+              refresh();
+            }}
+          />
         </>
       )}
 
-      {!active && (
+      {!active && !editingTemplate && (
         <section className="card">
           <h3>Lancer un entraînement enregistré</h3>
 
@@ -117,23 +146,34 @@ export function UserDashboard({ user }: { user: User }) {
               <article className="mini-card" key={template.id}>
                 <h4>{template.name}</h4>
 
+                {template.description && <p>{template.description}</p>}
+
                 <p>{template.exercises.length} exercices planifiés</p>
 
                 <ul className="template-summary">
                   {template.exercises.slice(0, 4).map((item) => (
                     <li key={item.id}>
                       {item.position}. {item.exercise.name} · {item.targetSets}×
-                      {item.targetDurationSec
-                        ? `${item.targetDurationSec}s`
-                        : (item.targetReps ?? "?")}{" "}
-                      · {modeLabels[item.executionMode]}
+                      {formatTemplateTarget(item)} · {modeLabels[item.executionMode]}
                     </li>
                   ))}
                 </ul>
 
-                <button className="primary" onClick={() => launch(template)}>
-                  Lancer
-                </button>
+                <div className="template-card-actions">
+                  <button className="primary" onClick={() => launch(template)}>
+                    Lancer
+                  </button>
+                  <button type="button" onClick={() => setEditingTemplate(template)}>
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => deleteTemplate(template)}
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </article>
             ))}
 

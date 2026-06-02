@@ -553,25 +553,53 @@ export const updateTemplate = async (
   templateId: string,
   data: any,
 ) => {
-  await prisma.templateExercise.deleteMany({
-    where: { workoutTemplateId: templateId },
+  const template = await prisma.workoutTemplate.findFirst({
+    where: { id: templateId, ownerId },
+    select: { id: true },
   });
 
-  return prisma.workoutTemplate.update({
-    where: { id: templateId, ownerId },
-    data: {
-      name: data.name,
-      description: data.description,
-      exercises: {
-        create: data.exercises,
+  if (!template) throw new Error("Workout template not found");
+
+  return prisma.$transaction(async (tx) => {
+    await tx.templateExercise.deleteMany({
+      where: { workoutTemplateId: templateId },
+    });
+
+    return tx.workoutTemplate.update({
+      where: { id: templateId },
+      data: {
+        name: data.name,
+        description: data.description,
+        exercises: {
+          create: data.exercises.map((exercise: PlannedExerciseInput) => ({
+            exerciseId: exercise.exerciseId,
+            position: exercise.position,
+            targetSets: exercise.targetSets ?? 3,
+            targetReps: exercise.targetReps ?? undefined,
+            targetDurationSec: exercise.targetDurationSec ?? undefined,
+            restSeconds: exercise.restSeconds ?? undefined,
+            executionMode: exercise.executionMode ?? "BILATERAL",
+            targetWeightKg: exercise.targetWeightKg ?? undefined,
+            leftWeightKg: exercise.leftWeightKg ?? undefined,
+            rightWeightKg: exercise.rightWeightKg ?? undefined,
+            notes: exercise.notes ?? undefined,
+          })),
+        },
       },
-    },
-    include: includeTemplate,
+      include: includeTemplate,
+    });
   });
 };
 
 export const deleteTemplate = async (ownerId: string, templateId: string) => {
-  return prisma.workoutTemplate.delete({
+  const template = await prisma.workoutTemplate.findFirst({
     where: { id: templateId, ownerId },
+    select: { id: true },
+  });
+
+  if (!template) throw new Error("Workout template not found");
+
+  return prisma.workoutTemplate.delete({
+    where: { id: templateId },
   });
 };

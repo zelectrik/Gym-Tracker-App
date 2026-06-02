@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { Exercise, ExecutionMode } from "../types";
+import type { Exercise, ExecutionMode, WorkoutTemplate } from "../types";
 
 type PlannedExerciseDraft = {
   exerciseId: string;
@@ -12,6 +12,25 @@ type PlannedExerciseDraft = {
   rightWeightKg: number;
   targetDurationSec?: number;
   restSeconds: number;
+  notes?: string;
+};
+
+type TemplatePayload = {
+  name: string;
+  description?: string;
+  exercises: Array<{
+    exerciseId: string;
+    position: number;
+    targetSets: number;
+    targetReps?: number;
+    targetDurationSec?: number;
+    restSeconds?: number;
+    executionMode?: ExecutionMode;
+    targetWeightKg?: number;
+    leftWeightKg?: number;
+    rightWeightKg?: number;
+    notes?: string;
+  }>;
 };
 
 function updateDraft(
@@ -27,62 +46,155 @@ function updateDraft(
   );
 }
 
+function moveDraft(
+  selected: PlannedExerciseDraft[],
+  setSelected: React.Dispatch<React.SetStateAction<PlannedExerciseDraft[]>>,
+  exerciseId: string,
+  direction: "up" | "down",
+) {
+  const index = selected.findIndex((item) => item.exerciseId === exerciseId);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+  if (index < 0 || targetIndex < 0 || targetIndex >= selected.length) return;
+
+  const copy = [...selected];
+  const [item] = copy.splice(index, 1);
+  copy.splice(targetIndex, 0, item);
+  setSelected(copy);
+}
+
+function buildDraftFromTemplate(template: WorkoutTemplate): PlannedExerciseDraft[] {
+  return [...template.exercises]
+    .sort((a, b) => a.position - b.position)
+    .map((item) => ({
+      exerciseId: item.exerciseId,
+      targetSets: item.targetSets ?? 3,
+      targetReps: item.targetReps ?? 10,
+      targetDurationSec: item.targetDurationSec ?? undefined,
+      executionMode: item.executionMode ?? "BILATERAL",
+      targetWeightKg: item.targetWeightKg ?? 0,
+      leftWeightKg: item.leftWeightKg ?? 0,
+      rightWeightKg: item.rightWeightKg ?? 0,
+      restSeconds: item.restSeconds ?? 90,
+      notes: item.notes ?? undefined,
+    }));
+}
+
+function isCardioOrDuration(exercise?: Exercise) {
+  return exercise?.trackingType === "CARDIO" || exercise?.progressionType === "DURATION";
+}
+
 export function CreateTemplate({
   exercises,
   onCreated,
+  templateToEdit = null,
+  onCancelEdit,
 }: {
   exercises: Exercise[];
   onCreated: () => void;
+  templateToEdit?: WorkoutTemplate | null;
+  onCancelEdit?: () => void;
 }) {
   const [name, setName] = useState("");
-
+  const [description, setDescription] = useState("");
   const [selected, setSelected] = useState<PlannedExerciseDraft[]>([]);
+  const isEditing = Boolean(templateToEdit);
 
-  const available = exercises.filter(
-    (exercise) => !selected.some((item) => item.exerciseId === exercise.id),
+  useEffect(() => {
+    if (!templateToEdit) return;
+
+    setName(templateToEdit.name);
+    setDescription(templateToEdit.description ?? "");
+    setSelected(buildDraftFromTemplate(templateToEdit));
+  }, [templateToEdit]);
+
+  const available = useMemo(
+    () =>
+      exercises.filter(
+        (exercise) => !selected.some((item) => item.exerciseId === exercise.id),
+      ),
+    [exercises, selected],
   );
+
+  function resetForm() {
+    setName("");
+    setDescription("");
+    setSelected([]);
+  }
+
+  function buildPayload(): TemplatePayload {
+    return {
+      name,
+      description: description || undefined,
+      exercises: selected.map((item, index) => {
+        const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
+        const isDurationExercise = isCardioOrDuration(exercise);
+
+        return {
+          exerciseId: item.exerciseId,
+          position: index + 1,
+          targetSets: item.targetSets,
+          targetReps: isDurationExercise ? undefined : item.targetReps,
+          targetDurationSec: isDurationExercise ? item.targetDurationSec : undefined,
+          restSeconds: item.restSeconds,
+          executionMode: item.executionMode,
+          targetWeightKg:
+            !isDurationExercise && item.executionMode === "BILATERAL"
+              ? item.targetWeightKg
+              : undefined,
+          leftWeightKg:
+            !isDurationExercise && item.executionMode === "LEFT_RIGHT"
+              ? item.leftWeightKg
+              : undefined,
+          rightWeightKg:
+            !isDurationExercise && item.executionMode === "LEFT_RIGHT"
+              ? item.rightWeightKg
+              : undefined,
+          notes: item.notes || undefined,
+        };
+      }),
+    };
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
 
-    await api.createTemplate({
-      name,
-      exercises: selected.map((item, index) => ({
-        exerciseId: item.exerciseId,
-        position: index + 1,
-        targetSets: item.targetSets,
-        targetReps: item.targetDurationSec ? undefined : item.targetReps,
-        targetDurationSec: item.targetDurationSec,
-        restSeconds: item.restSeconds,
-        executionMode: item.executionMode,
-        targetWeightKg:
-          item.executionMode === "BILATERAL" ? item.targetWeightKg : undefined,
-        leftWeightKg:
-          item.executionMode === "LEFT_RIGHT" ? item.leftWeightKg : undefined,
-        rightWeightKg:
-          item.executionMode === "LEFT_RIGHT" ? item.rightWeightKg : undefined,
-      })),
-    });
+    const payload = buildPayload();
 
-    setName("");
-    setSelected([]);
+    if (templateToEdit) {
+      await api.updateTemplate(templateToEdit.id, payload);
+    } else {
+      await api.createTemplate(payload);
+    }
 
+    resetForm();
     onCreated();
   }
 
   return (
-    <section className="card">
+    <section className={`card ${isEditing ? "editing-template-card" : ""}`}>
       <div className="section-title">
         <div>
-          <span className="pill">V1 MVP</span>
+          <span className="pill">{isEditing ? "Édition" : "V1 MVP"}</span>
 
-          <h3>Créer un entraînement planifié</h3>
+          <h3>{isEditing ? `Modifier ${templateToEdit?.name}` : "Créer un entraînement planifié"}</h3>
 
           <p>
-            Définis les exercices, séries, reps, durée, charges et mode
-            d’exécution.
+            Définis les exercices, séries, reps, durée, charges et mode d’exécution.
           </p>
         </div>
+
+        {isEditing && onCancelEdit && (
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              onCancelEdit();
+            }}
+          >
+            Annuler
+          </button>
+        )}
       </div>
 
       <form onSubmit={submit} className="template-builder">
@@ -97,6 +209,15 @@ export function CreateTemplate({
         </label>
 
         <label>
+          Description
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Séance solo, séance avec amie..."
+          />
+        </label>
+
+        <label>
           Ajouter un exercice
           <select
             onChange={(e) => {
@@ -104,18 +225,17 @@ export function CreateTemplate({
                 const selectedExercise = exercises.find(
                   (exercise) => exercise.id === e.target.value,
                 );
-                const isDurationExercise =
-                  selectedExercise?.progressionType === "DURATION";
-                const isCardioExercise =
-                  selectedExercise?.trackingType === "CARDIO";
+                const isDurationExercise = selectedExercise?.progressionType === "DURATION";
+                const isCardioExercise = selectedExercise?.trackingType === "CARDIO";
+                const usesDuration = isDurationExercise || isCardioExercise;
 
                 setSelected([
                   ...selected,
                   {
                     exerciseId: e.target.value,
                     targetSets: 3,
-                    targetReps: isDurationExercise ? 0 : 10,
-                    targetDurationSec: isDurationExercise ? 30 : undefined,
+                    targetReps: usesDuration ? 0 : 10,
+                    targetDurationSec: usesDuration ? (isCardioExercise ? 1800 : 30) : undefined,
                     executionMode: "BILATERAL",
                     targetWeightKg: 0,
                     leftWeightKg: 0,
@@ -145,7 +265,7 @@ export function CreateTemplate({
             );
 
             const isCardioExercise = exercise?.trackingType === "CARDIO";
-            const isDurationExercise = exercise?.progressionType === "DURATION";
+            const isDurationExercise = exercise?.progressionType === "DURATION" || isCardioExercise;
 
             return (
               <article className="planned-line" key={item.exerciseId}>
@@ -154,19 +274,34 @@ export function CreateTemplate({
                     {index + 1}. {exercise?.name}
                   </b>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelected(
-                        selected.filter(
-                          (candidate) =>
-                            candidate.exerciseId !== item.exerciseId,
-                        ),
-                      )
-                    }
-                  >
-                    Retirer
-                  </button>
+                  <div className="template-line-actions">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => moveDraft(selected, setSelected, item.exerciseId, "up")}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === selected.length - 1}
+                      onClick={() => moveDraft(selected, setSelected, item.exerciseId, "down")}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelected(
+                          selected.filter(
+                            (candidate) => candidate.exerciseId !== item.exerciseId,
+                          ),
+                        )
+                      }
+                    >
+                      Retirer
+                    </button>
+                  </div>
                 </div>
 
                 <div className="planned-grid">
@@ -220,21 +355,22 @@ export function CreateTemplate({
                     </label>
                   )}
 
-                  <label>
-                    Mode
-                    <select
-                      value={item.executionMode}
-                      onChange={(e) =>
-                        updateDraft(selected, setSelected, item.exerciseId, {
-                          executionMode: e.target.value as ExecutionMode,
-                        })
-                      }
-                    >
-                      <option value="BILATERAL">bilatéral</option>
-
-                      <option value="LEFT_RIGHT">gauche puis droite</option>
-                    </select>
-                  </label>
+                  {!isDurationExercise && (
+                    <label>
+                      Mode
+                      <select
+                        value={item.executionMode}
+                        onChange={(e) =>
+                          updateDraft(selected, setSelected, item.exerciseId, {
+                            executionMode: e.target.value as ExecutionMode,
+                          })
+                        }
+                      >
+                        <option value="BILATERAL">bilatéral</option>
+                        <option value="LEFT_RIGHT">gauche puis droite</option>
+                      </select>
+                    </label>
+                  )}
 
                   {!isDurationExercise &&
                     (item.executionMode === "BILATERAL" ? (
@@ -246,14 +382,9 @@ export function CreateTemplate({
                           step="0.5"
                           value={item.targetWeightKg}
                           onChange={(e) =>
-                            updateDraft(
-                              selected,
-                              setSelected,
-                              item.exerciseId,
-                              {
-                                targetWeightKg: Number(e.target.value),
-                              },
-                            )
+                            updateDraft(selected, setSelected, item.exerciseId, {
+                              targetWeightKg: Number(e.target.value),
+                            })
                           }
                         />
                       </label>
@@ -267,14 +398,9 @@ export function CreateTemplate({
                             step="0.5"
                             value={item.leftWeightKg}
                             onChange={(e) =>
-                              updateDraft(
-                                selected,
-                                setSelected,
-                                item.exerciseId,
-                                {
-                                  leftWeightKg: Number(e.target.value),
-                                },
-                              )
+                              updateDraft(selected, setSelected, item.exerciseId, {
+                                leftWeightKg: Number(e.target.value),
+                              })
                             }
                           />
                         </label>
@@ -287,14 +413,9 @@ export function CreateTemplate({
                             step="0.5"
                             value={item.rightWeightKg}
                             onChange={(e) =>
-                              updateDraft(
-                                selected,
-                                setSelected,
-                                item.exerciseId,
-                                {
-                                  rightWeightKg: Number(e.target.value),
-                                },
-                              )
+                              updateDraft(selected, setSelected, item.exerciseId, {
+                                rightWeightKg: Number(e.target.value),
+                              })
                             }
                           />
                         </label>
@@ -307,7 +428,7 @@ export function CreateTemplate({
         </div>
 
         <button className="primary large-action" disabled={!selected.length}>
-          Enregistrer l'entraînement
+          {isEditing ? "Enregistrer les modifications" : "Enregistrer l'entraînement"}
         </button>
       </form>
     </section>
