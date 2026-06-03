@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  addSessionExerciseHandler,
   addSetHandler,
   upsertCardioEntryHandler,
   createSessionHandler,
@@ -12,6 +13,9 @@ import {
   getTemplatesHandler,
   importProgramTemplatesHandler,
   updateSessionStatusHandler,
+  replaceSessionExerciseHandler,
+  removeSessionExerciseHandler,
+  getSessionExerciseSuggestionsHandler,
 } from "../controllers/workout.controller";
 import { requireAuth } from "../middlewares/auth.middleware";
 
@@ -28,6 +32,10 @@ router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);
 router.patch("/sessions/:sessionId/status", updateSessionStatusHandler);
 router.delete("/sessions/:sessionId", deleteSessionHandler);
+router.post("/sessions/:sessionId/exercises", addSessionExerciseHandler);
+router.get("/session-exercises/:sessionExerciseId/suggestions", getSessionExerciseSuggestionsHandler);
+router.patch("/session-exercises/:sessionExerciseId/replace", replaceSessionExerciseHandler);
+router.delete("/session-exercises/:sessionExerciseId", removeSessionExerciseHandler);
 router.post("/session-exercises/:sessionExerciseId/sets", addSetHandler);
 router.put("/session-exercises/:sessionExerciseId/cardio-entry", upsertCardioEntryHandler);
 

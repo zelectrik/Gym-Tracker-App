@@ -1,13 +1,16 @@
 import { Request, Response } from "express";
 import {
+  addSessionExerciseSchema,
   addSetSchema,
   cardioEntrySchema,
   createWorkoutSessionSchema,
   createWorkoutTemplateSchema,
   importProgramTemplateSchema,
   updateWorkoutStatusSchema,
+  replaceSessionExerciseSchema,
 } from "../schemas/workout.schema";
 import {
+  addSessionExercise,
   addSet,
   upsertCardioEntry,
   createSession,
@@ -20,6 +23,9 @@ import {
   getTemplates,
   importProgramTemplates,
   updateSessionStatus,
+  replaceSessionExercise,
+  removeSessionExercise,
+  getSessionExerciseSuggestions,
 } from "../services/workout.service";
 
 export const updateTemplateHandler = async (req: Request, res: Response) => {
@@ -96,4 +102,31 @@ export const getLastExercisePerformanceHandler = async (req: Request, res: Respo
   );
 
   return res.status(200).json(result);
+};
+
+export const addSessionExerciseHandler = async (req: Request, res: Response) => {
+  const parsed = addSessionExerciseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  return res.status(201).json(
+    await addSessionExercise(req.user!.id, req.params.sessionId as string, parsed.data),
+  );
+};
+
+export const replaceSessionExerciseHandler = async (req: Request, res: Response) => {
+  const parsed = replaceSessionExerciseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  return res.status(200).json(
+    await replaceSessionExercise(req.user!.id, req.params.sessionExerciseId as string, parsed.data.exerciseId),
+  );
+};
+
+export const removeSessionExerciseHandler = async (req: Request, res: Response) => {
+  await removeSessionExercise(req.user!.id, req.params.sessionExerciseId as string);
+  return res.status(204).send();
+};
+
+export const getSessionExerciseSuggestionsHandler = async (req: Request, res: Response) => {
+  return res.status(200).json(
+    await getSessionExerciseSuggestions(req.user!.id, req.params.sessionExerciseId as string),
+  );
 };

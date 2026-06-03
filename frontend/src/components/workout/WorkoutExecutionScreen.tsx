@@ -5,6 +5,7 @@ import type {
   ExerciseSide,
   LastExercisePerformance,
   CardioEntry,
+  Exercise,
   SessionExercise,
   WorkoutSession,
 } from "../../types";
@@ -64,10 +65,12 @@ function displaySide(side: ExerciseSide) {
 
 export function WorkoutExecutionScreen({
   session,
+  exercises,
   onRefresh,
   onExitFocus,
 }: {
   session: WorkoutSession;
+  exercises: Exercise[];
   onRefresh: () => void | Promise<void>;
   onExitFocus?: () => void;
 }) {
@@ -80,6 +83,8 @@ export function WorkoutExecutionScreen({
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
     null,
   );
+  const [adjustMode, setAdjustMode] = useState<"add" | "replace" | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<SessionExercise | null>(null);
 
   const exercisesWithProgress = useMemo(() => {
     return session.exercises.map((exercise) => {
@@ -170,31 +175,90 @@ export function WorkoutExecutionScreen({
                 ).length;
 
                 return (
-                  <button
+                  <article
                     key={exercise.id}
-                    disabled={exercise.completed}
-                    className={`exercise-mobile-item focus-exercise-item ${exercise.completed ? "done" : ""}`}
-                    onClick={() => {
-                      setSelectedExerciseId(exercise.id);
-                      setStep("exercise");
-                    }}
+                    className={`exercise-mobile-item focus-exercise-item live-exercise-item ${exercise.completed ? "done" : ""}`}
                   >
-                    <div>
-                      <strong>
-                        {exercise.position}. {exercise.exercise.name}
-                      </strong>
+                    <button
+                      type="button"
+                      disabled={exercise.completed}
+                      className="live-exercise-main"
+                      onClick={() => {
+                        setSelectedExerciseId(exercise.id);
+                        setStep("exercise");
+                      }}
+                    >
+                      <div>
+                        <strong>
+                          {exercise.position}. {exercise.exercise.name}
+                        </strong>
 
-                      <span>
-                        {exercise.completed ? "Terminé" : `${done}/${total}`}
-                      </span>
-                    </div>
-                  </button>
+                        <span>
+                          {exercise.completed ? "Terminé" : `${done}/${total}`}
+                        </span>
+                      </div>
+                    </button>
+
+                    {!exercise.completed && (
+                      <div className="live-exercise-actions">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdjustTarget(exercise);
+                            setAdjustMode("replace");
+                          }}
+                        >
+                          Remplacer
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={async () => {
+                            if (!confirm(`Supprimer ${exercise.exercise.name} de cette séance ?`)) return;
+                            await api.removeSessionExercise(exercise.id);
+                            await Promise.resolve(onRefresh());
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </article>
                 );
               })}
             </div>
+
+            {adjustMode && (
+              <LiveExerciseAdjustPanel
+                mode={adjustMode}
+                session={session}
+                exercises={exercises}
+                targetExercise={adjustTarget}
+                currentSessionExercises={session.exercises}
+                onClose={() => {
+                  setAdjustMode(null);
+                  setAdjustTarget(null);
+                }}
+                onDone={async () => {
+                  setAdjustMode(null);
+                  setAdjustTarget(null);
+                  await Promise.resolve(onRefresh());
+                }}
+              />
+            )}
           </main>
 
-          <footer className="one-page-footer">
+          <footer className="one-page-footer live-list-footer">
+            <button
+              type="button"
+              className="secondary fullscreen-secondary-button"
+              onClick={() => {
+                setAdjustTarget(null);
+                setAdjustMode("add");
+              }}
+            >
+              Ajouter un exercice
+            </button>
             <button className="primary fullscreen-button" onClick={openSummary}>
               Finir l'entraînement
             </button>
@@ -253,6 +317,135 @@ export function WorkoutExecutionScreen({
       onExerciseFinished={() => setStep("exercise-list")}
       onRefresh={onRefresh}
     />
+  );
+}
+
+
+function getExerciseMatchLabel(exercise: Exercise, target?: SessionExercise | null) {
+  if (!target) return exercise.muscleGroup;
+  const overlap = exercise.muscles.filter((muscle) => target.exercise.muscles.includes(muscle));
+  return overlap.length ? overlap.map((muscle) => muscle.replaceAll("_", " ")).join(", ") : exercise.muscleGroup;
+}
+
+function LiveExerciseAdjustPanel({
+  mode,
+  session,
+  exercises,
+  targetExercise,
+  currentSessionExercises,
+  onClose,
+  onDone,
+}: {
+  mode: "add" | "replace";
+  session: WorkoutSession;
+  exercises: Exercise[];
+  targetExercise: SessionExercise | null;
+  currentSessionExercises: SessionExercise[];
+  onClose: () => void;
+  onDone: () => void | Promise<void>;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Array<Exercise & { score?: number }>>([]);
+  const [savingExerciseId, setSavingExerciseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "replace" || !targetExercise) {
+      setSuggestions([]);
+      return;
+    }
+
+    let mounted = true;
+    api
+      .exerciseSuggestions(targetExercise.id)
+      .then((result) => {
+        if (mounted) setSuggestions(result);
+      })
+      .catch(() => {
+        if (mounted) setSuggestions([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [mode, targetExercise?.id]);
+
+  const currentExerciseIds = new Set(currentSessionExercises.map((item) => item.exerciseId));
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const candidates = useMemo(() => {
+    const base = mode === "replace" && suggestions.length ? suggestions : exercises;
+    return base
+      .filter((exercise) => mode === "replace" || !currentExerciseIds.has(exercise.id))
+      .filter((exercise) => {
+        if (!normalizedQuery) return true;
+        return (
+          exercise.name.toLowerCase().includes(normalizedQuery) ||
+          exercise.muscles.some((muscle) => muscle.toLowerCase().includes(normalizedQuery)) ||
+          exercise.muscleGroup.toLowerCase().includes(normalizedQuery)
+        );
+      })
+      .slice(0, 16);
+  }, [exercises, suggestions, mode, normalizedQuery, currentSessionExercises]);
+
+  async function chooseExercise(exercise: Exercise) {
+    setSavingExerciseId(exercise.id);
+    try {
+      if (mode === "replace" && targetExercise) {
+        await api.replaceSessionExercise(targetExercise.id, exercise.id);
+      } else {
+        await api.addSessionExercise(session.id, { exerciseId: exercise.id });
+      }
+      await Promise.resolve(onDone());
+    } finally {
+      setSavingExerciseId(null);
+    }
+  }
+
+  return (
+    <section className="live-adjust-panel">
+      <div className="live-adjust-head">
+        <div>
+          <span className="pill">{mode === "replace" ? "Remplacement" : "Ajout"}</span>
+          <h3>
+            {mode === "replace" && targetExercise
+              ? `Remplacer ${targetExercise.exercise.name}`
+              : "Ajouter un exercice"}
+          </h3>
+          <p>
+            {mode === "replace"
+              ? "Suggestions basées sur les muscles travaillés. Les séries/reps sont conservées, le poids se base sur l’historique du nouvel exercice."
+              : "L’exercice est ajouté seulement à cette séance. Si tu l’as déjà fait, l’historique servira de base."}
+          </p>
+        </div>
+        <button type="button" onClick={onClose}>Fermer</button>
+      </div>
+
+      <input
+        className="live-adjust-search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Rechercher un exercice..."
+      />
+
+      <div className="live-adjust-list">
+        {candidates.map((exercise) => (
+          <button
+            key={exercise.id}
+            type="button"
+            onClick={() => chooseExercise(exercise)}
+            disabled={Boolean(savingExerciseId)}
+          >
+            <strong>{exercise.name}</strong>
+            <span>
+              {getExerciseMatchLabel(exercise, targetExercise)} · {exercise.progressionType}
+            </span>
+            {savingExerciseId === exercise.id && <em>Application...</em>}
+          </button>
+        ))}
+
+        {candidates.length === 0 && <p>Aucun exercice trouvé.</p>}
+      </div>
+    </section>
   );
 }
 

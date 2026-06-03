@@ -485,7 +485,7 @@ export const getLastExercisePerformance = async (userId: string, exerciseId: str
     sessionId: lastSessionExercise.session.id,
     sessionTitle: lastSessionExercise.session.title,
     completedAt: lastSessionExercise.session.completedAt ?? lastSessionExercise.session.createdAt,
-    sets: lastSessionExercise.sets.map((set) => ({
+    sets: lastSessionExercise.sets.map((set: any) => ({
       setNumber: set.setNumber,
       side: set.side,
       reps: set.reps,
@@ -589,6 +589,243 @@ export const upsertCardioEntry = (sessionExerciseId: string, data: CardioEntryIn
       notes: data.notes ?? undefined,
     },
   });
+
+async function assertSessionExerciseAccess(userId: string, sessionExerciseId: string) {
+  const sessionExercise = await prisma.sessionExercise.findFirst({
+    where: {
+      id: sessionExerciseId,
+      session: {
+        status: "IN_PROGRESS",
+        participants: { some: { userId } },
+      },
+    },
+    include: { exercise: true, sets: true, session: true, cardioEntry: true },
+  });
+
+  if (!sessionExercise) throw new Error("Session exercise not found");
+  return sessionExercise;
+}
+
+async function assertSessionAccess(userId: string, sessionId: string) {
+  const session = await prisma.workoutSession.findFirst({
+    where: {
+      id: sessionId,
+      status: "IN_PROGRESS",
+      participants: { some: { userId } },
+    },
+    include: includeSession,
+  });
+
+  if (!session) throw new Error("Workout session not found");
+  return session;
+}
+
+async function getLastRawSessionExercise(userId: string, exerciseId: string) {
+  return prisma.sessionExercise.findFirst({
+    where: {
+      exerciseId,
+      session: {
+        status: "COMPLETED",
+        participants: { some: { userId } },
+      },
+      OR: [{ sets: { some: { completed: true } } }, { cardioEntry: { isNot: null } }],
+    },
+    include: {
+      sets: {
+        where: { completed: true },
+        orderBy: [{ setNumber: "asc" }, { side: "asc" }],
+      },
+      cardioEntry: true,
+    },
+    orderBy: [
+      { session: { completedAt: "desc" } },
+      { session: { createdAt: "desc" } },
+    ],
+  });
+}
+
+function findHistorySet(
+  history: { sets: Array<{ setNumber: number; side: ExerciseSide; reps: number | null; weightKg: number | null; durationSec: number | null; distanceMeters: number | null }> } | null,
+  setNumber: number,
+  side: ExerciseSide,
+) {
+  if (!history) return null;
+
+  return (
+    history.sets.find((set) => set.setNumber === setNumber && set.side === side) ??
+    history.sets.find((set) => set.side === side) ??
+    history.sets.find((set) => set.side === "BOTH") ??
+    null
+  );
+}
+
+async function buildLiveSessionExerciseInput(
+  userId: string,
+  exerciseId: string,
+  fallback?: Partial<PlannedExerciseInput>,
+): Promise<PlannedExerciseInput> {
+  const exercise = await prisma.exercise.findUnique({ where: { id: exerciseId } });
+  if (!exercise) throw new Error("Exercise not found");
+
+  const history = await getLastRawSessionExercise(userId, exerciseId);
+  const targetSets = fallback?.targetSets ?? history?.sets.length ?? 3;
+  const executionMode = fallback?.executionMode ?? "BILATERAL";
+  const sides: ExerciseSide[] = executionMode === "LEFT_RIGHT" ? ["LEFT", "RIGHT"] : ["BOTH"];
+
+  const firstHistorySet = history?.sets[0];
+  const targetReps = fallback?.targetReps ?? firstHistorySet?.reps ?? 10;
+  const targetDurationSec =
+    fallback?.targetDurationSec ??
+    firstHistorySet?.durationSec ??
+    (exercise.trackingType === "CARDIO"
+      ? 1800
+      : exercise.progressionType === "DURATION"
+        ? 30
+        : undefined);
+
+  const targetWeightKg = fallback?.targetWeightKg ?? firstHistorySet?.weightKg ?? 0;
+  const leftWeightKg =
+    fallback?.leftWeightKg ??
+    history?.sets.find((set: any) => set.side === "LEFT")?.weightKg ??
+    targetWeightKg;
+  const rightWeightKg =
+    fallback?.rightWeightKg ??
+    history?.sets.find((set: any) => set.side === "RIGHT")?.weightKg ??
+    targetWeightKg;
+
+  const sets = Array.from({ length: targetSets }).flatMap((_, index) =>
+    sides.map((side) => {
+      const historySet = findHistorySet(history, index + 1, side);
+      return {
+        setNumber: index + 1,
+        side,
+        reps: historySet?.reps ?? targetReps ?? undefined,
+        weightKg:
+          historySet?.weightKg ??
+          (side === "LEFT" ? leftWeightKg : side === "RIGHT" ? rightWeightKg : targetWeightKg) ??
+          undefined,
+        durationSec: historySet?.durationSec ?? targetDurationSec ?? undefined,
+        distanceMeters: historySet?.distanceMeters ?? undefined,
+        completed: false,
+      };
+    }),
+  );
+
+  return {
+    exerciseId,
+    position: fallback?.position ?? 1,
+    targetSets,
+    targetReps: exercise.progressionType === "DURATION" || exercise.trackingType === "CARDIO" ? undefined : targetReps,
+    targetDurationSec: exercise.progressionType === "DURATION" || exercise.trackingType === "CARDIO" ? targetDurationSec : undefined,
+    restSeconds: fallback?.restSeconds ?? 90,
+    executionMode,
+    targetWeightKg: executionMode === "BILATERAL" && exercise.progressionType !== "DURATION" && exercise.trackingType !== "CARDIO" ? targetWeightKg : undefined,
+    leftWeightKg: executionMode === "LEFT_RIGHT" && exercise.progressionType !== "DURATION" && exercise.trackingType !== "CARDIO" ? leftWeightKg : undefined,
+    rightWeightKg: executionMode === "LEFT_RIGHT" && exercise.progressionType !== "DURATION" && exercise.trackingType !== "CARDIO" ? rightWeightKg : undefined,
+    notes: fallback?.notes ?? "Ajouté pendant la séance",
+    sets,
+  };
+}
+
+export const addSessionExercise = async (
+  userId: string,
+  sessionId: string,
+  data: Omit<PlannedExerciseInput, "position"> & { position?: number },
+) => {
+  const session = await assertSessionAccess(userId, sessionId);
+  const nextPosition =
+    data.position ??
+    session.exercises.reduce((max: number, exercise: any) => Math.max(max, exercise.position), 0) + 1;
+
+  const input = await buildLiveSessionExerciseInput(userId, data.exerciseId, {
+    ...data,
+    position: nextPosition,
+  });
+
+  return prisma.sessionExercise.create({
+    data: {
+      sessionId,
+      ...toSessionExerciseCreate(input),
+    },
+    include: { exercise: true, sets: { orderBy: [{ setNumber: "asc" }, { side: "asc" }] }, cardioEntry: true },
+  });
+};
+
+export const replaceSessionExercise = async (
+  userId: string,
+  sessionExerciseId: string,
+  exerciseId: string,
+) => {
+  const current = await assertSessionExerciseAccess(userId, sessionExerciseId);
+
+  await prisma.exerciseSet.deleteMany({ where: { sessionExerciseId } });
+  await prisma.cardioEntry.deleteMany({ where: { sessionExerciseId } });
+
+  const input = await buildLiveSessionExerciseInput(userId, exerciseId, {
+    position: current.position,
+    targetSets: current.targetSets ?? undefined,
+    targetReps: current.targetReps ?? undefined,
+    targetDurationSec: current.targetDurationSec ?? undefined,
+    restSeconds: current.restSeconds ?? undefined,
+    executionMode: current.executionMode,
+    targetWeightKg: current.targetWeightKg ?? undefined,
+    leftWeightKg: current.leftWeightKg ?? undefined,
+    rightWeightKg: current.rightWeightKg ?? undefined,
+    notes: `Remplace ${current.exercise.name}`,
+  });
+
+  return prisma.sessionExercise.update({
+    where: { id: sessionExerciseId },
+    data: {
+      exerciseId,
+      targetSets: input.targetSets,
+      targetReps: input.targetReps ?? null,
+      targetDurationSec: input.targetDurationSec ?? null,
+      restSeconds: input.restSeconds ?? null,
+      executionMode: input.executionMode,
+      targetWeightKg: input.targetWeightKg ?? null,
+      leftWeightKg: input.leftWeightKg ?? null,
+      rightWeightKg: input.rightWeightKg ?? null,
+      notes: input.notes,
+      sets: { create: buildPlannedSets(input) },
+    },
+    include: { exercise: true, sets: { orderBy: [{ setNumber: "asc" }, { side: "asc" }] }, cardioEntry: true },
+  });
+};
+
+export const removeSessionExercise = async (userId: string, sessionExerciseId: string) => {
+  await assertSessionExerciseAccess(userId, sessionExerciseId);
+  return prisma.sessionExercise.delete({ where: { id: sessionExerciseId } });
+};
+
+export const getSessionExerciseSuggestions = async (
+  userId: string,
+  sessionExerciseId: string,
+) => {
+  const current = await assertSessionExerciseAccess(userId, sessionExerciseId);
+  const currentMuscles = current.exercise.muscles ?? [];
+
+  const candidates = await prisma.exercise.findMany({
+    where: {
+      id: { not: current.exerciseId },
+      trackingType: current.exercise.trackingType,
+      progressionType: current.exercise.progressionType,
+      OR: [
+        { muscleGroup: current.exercise.muscleGroup },
+        ...(currentMuscles.length ? [{ muscles: { hasSome: currentMuscles } }] : []),
+      ],
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return candidates
+    .map((exercise: any) => {
+      const overlap = exercise.muscles.filter((muscle: string) => currentMuscles.includes(muscle)).length;
+      return { ...exercise, score: overlap + (exercise.muscleGroup === current.exercise.muscleGroup ? 1 : 0) };
+    })
+    .sort((a: any, b: any) => b.score - a.score || a.name.localeCompare(b.name))
+    .slice(0, 12);
+};
 
 export const updateTemplate = async (
   ownerId: string,

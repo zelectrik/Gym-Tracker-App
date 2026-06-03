@@ -1510,3 +1510,92 @@ button.danger:hover,
     flex-direction: column;
   }
 }
+
+/* Live workout exercise adjustments */
+.live-exercise-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.live-exercise-main {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.live-exercise-actions,
+.live-list-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.live-adjust-panel {
+  margin-top: 14px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.live-adjust-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.live-adjust-head h3 {
+  margin: 6px 0;
+}
+
+.live-adjust-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.live-adjust-search {
+  width: 100%;
+}
+
+.live-adjust-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.live-adjust-list button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.live-adjust-list span,
+.live-adjust-list em {
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 620px) {
+  .live-exercise-actions,
+  .live-list-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .live-adjust-head {
+    display: grid;
+  }
+}

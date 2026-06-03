@@ -85,6 +85,15 @@ export const importProgramTemplateSchema = z.object({
   ).min(1),
 });
 
+
+export const addSessionExerciseSchema = plannedExerciseSchema.omit({ position: true }).extend({
+  position: z.number().int().min(1).optional(),
+});
+
+export const replaceSessionExerciseSchema = z.object({
+  exerciseId: z.string().uuid(),
+});
+
 export const createWorkoutSessionSchema = z.object({
   title: z.string().trim().min(1),
   templateId: z.string().uuid().optional(),

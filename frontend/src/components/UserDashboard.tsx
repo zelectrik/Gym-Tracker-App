@@ -57,6 +57,7 @@ export function UserDashboard({ user }: { user: User }) {
     return (
       <WorkoutExecutionScreen
         session={active}
+        exercises={exercises}
         onRefresh={refresh}
         onExitFocus={() => setFocusMode(false)}
       />

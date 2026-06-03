@@ -6,6 +6,7 @@ import type {
   Progress,
   ProgressionType,
   User,
+  SessionExercise,
   WorkoutSession,
   WorkoutStatus,
   WorkoutTemplate,
@@ -165,6 +166,36 @@ export const api = {
     }),
   deleteSession: (sessionId: string) =>
     request(`/workouts/sessions/${sessionId}`, {
+      method: "DELETE",
+    }),
+
+  addSessionExercise: (sessionId: string, body: {
+    exerciseId: string;
+    targetSets?: number;
+    targetReps?: number;
+    targetDurationSec?: number;
+    restSeconds?: number;
+    executionMode?: ExecutionMode;
+    targetWeightKg?: number;
+    leftWeightKg?: number;
+    rightWeightKg?: number;
+    notes?: string;
+  }) =>
+    request<SessionExercise>(`/workouts/sessions/${sessionId}/exercises`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  exerciseSuggestions: (sessionExerciseId: string) =>
+    request<Array<Exercise & { score?: number }>>(
+      `/workouts/session-exercises/${sessionExerciseId}/suggestions`,
+    ),
+  replaceSessionExercise: (sessionExerciseId: string, exerciseId: string) =>
+    request<SessionExercise>(`/workouts/session-exercises/${sessionExerciseId}/replace`, {
+      method: "PATCH",
+      body: JSON.stringify({ exerciseId }),
+    }),
+  removeSessionExercise: (sessionExerciseId: string) =>
+    request(`/workouts/session-exercises/${sessionExerciseId}`, {
       method: "DELETE",
     }),
   addSet: (
