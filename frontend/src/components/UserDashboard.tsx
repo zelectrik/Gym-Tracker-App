@@ -11,6 +11,7 @@ import { modeLabels } from "../utils/workoutLabels";
 import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
+import { StatsDashboard } from "./StatsDashboard";
 
 function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
   if (item.targetDurationSec) {
@@ -153,6 +154,8 @@ export function UserDashboard({ user }: { user: User }) {
           </div>
         )}
       </section>
+
+      <StatsDashboard sessions={sessions} exercises={exercises} />
 
       {!active && (
         <>
