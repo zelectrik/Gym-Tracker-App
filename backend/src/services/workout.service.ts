@@ -391,6 +391,20 @@ export const createSession = async (ownerId: string, data: any) => {
     new Set([ownerId, ...(data.participantIds ?? [])]),
   );
 
+  if (data.templateId) {
+    const existingActiveSession = await prisma.workoutSession.findFirst({
+      where: {
+        templateId: data.templateId,
+        status: "IN_PROGRESS",
+        participants: { some: { userId: ownerId } },
+      },
+      include: includeSession,
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existingActiveSession) return existingActiveSession;
+  }
+
   let plannedExercises: PlannedExerciseInput[] = data.exercises ?? [];
 
   if (!plannedExercises.length && data.templateId) {
@@ -490,19 +504,47 @@ export const getSessionsForUser = (userId: string) =>
     orderBy: { createdAt: "desc" },
   });
 
-export const updateSessionStatus = (
+export const updateSessionStatus = async (
+  userId: string,
   sessionId: string,
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
-) =>
-  prisma.workoutSession.update({
+) => {
+  const existingSession = await prisma.workoutSession.findFirst({
+    where: { id: sessionId, participants: { some: { userId } } },
+    select: { id: true, status: true, startedAt: true, completedAt: true },
+  });
+
+  if (!existingSession) throw new Error("Workout session not found");
+
+  return prisma.workoutSession.update({
     where: { id: sessionId },
     data: {
       status,
-      startedAt: status === "IN_PROGRESS" ? new Date() : undefined,
-      completedAt: status === "COMPLETED" ? new Date() : undefined,
+      startedAt:
+        status === "IN_PROGRESS"
+          ? (existingSession.startedAt ?? new Date())
+          : existingSession.startedAt,
+      completedAt:
+        status === "COMPLETED"
+          ? (existingSession.completedAt ?? new Date())
+          : status === "CANCELLED"
+            ? null
+            : existingSession.completedAt,
     },
     include: includeSession,
   });
+};
+
+export const deleteSession = async (userId: string, sessionId: string) => {
+  const existingSession = await prisma.workoutSession.findFirst({
+    where: { id: sessionId, participants: { some: { userId } } },
+    select: { id: true },
+  });
+
+  if (!existingSession) throw new Error("Workout session not found");
+
+  return prisma.workoutSession.delete({ where: { id: sessionId } });
+};
 
 export const addSet = (sessionExerciseId: string, data: any) =>
   prisma.exerciseSet.upsert({

@@ -14,6 +14,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  deleteSession,
   getLastExercisePerformance,
   getSessionsForUser,
   getTemplates,
@@ -59,7 +60,18 @@ export const getSessionsHandler = async (req: Request, res: Response) =>
 export const updateSessionStatusHandler = async (req: Request, res: Response) => {
   const parsed = updateWorkoutStatusSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  return res.status(200).json(await updateSessionStatus(req.params.sessionId as string, parsed.data.status));
+  return res.status(200).json(
+    await updateSessionStatus(
+      req.user!.id,
+      req.params.sessionId as string,
+      parsed.data.status,
+    ),
+  );
+};
+
+export const deleteSessionHandler = async (req: Request, res: Response) => {
+  await deleteSession(req.user!.id, req.params.sessionId as string);
+  return res.status(204).send();
 };
 
 export const addSetHandler = async (req: Request, res: Response) => {

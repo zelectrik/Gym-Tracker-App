@@ -30,6 +30,7 @@ export function UserDashboard({ user }: { user: User }) {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [focusMode, setFocusMode] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
+  const [launchingTemplateId, setLaunchingTemplateId] = useState<string | null>(null);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
 
@@ -62,14 +63,40 @@ export function UserDashboard({ user }: { user: User }) {
   }
 
   async function launch(template: WorkoutTemplate) {
-    const created = await api.createSession({
-      title: template.name,
-      templateId: template.id,
-    });
+    if (launchingTemplateId) return;
 
-    await api.updateSessionStatus(created.id, "IN_PROGRESS");
+    setLaunchingTemplateId(template.id);
+    try {
+      const created = await api.createSession({
+        title: template.name,
+        templateId: template.id,
+      });
 
-    refresh();
+      await api.updateSessionStatus(created.id, "IN_PROGRESS");
+      setFocusMode(true);
+      await refresh();
+    } finally {
+      setLaunchingTemplateId(null);
+    }
+  }
+
+  async function cancelActiveSession() {
+    if (!active) return;
+
+    const confirmed = confirm(`Annuler la séance en cours "${active.title}" ?`);
+    if (!confirmed) return;
+
+    await api.updateSessionStatus(active.id, "CANCELLED");
+    setFocusMode(false);
+    await refresh();
+  }
+
+  async function deleteSession(session: WorkoutSession) {
+    const confirmed = confirm(`Supprimer la séance "${session.title}" de l'historique ?`);
+    if (!confirmed) return;
+
+    await api.deleteSession(session.id);
+    await refresh();
   }
 
   async function deleteTemplate(template: WorkoutTemplate) {
@@ -88,9 +115,14 @@ export function UserDashboard({ user }: { user: User }) {
           <section className="card">
             <h3>Séance en cours</h3>
             <p>{active.title}</p>
-            <button className="primary" onClick={() => setFocusMode(true)}>
-              Reprendre en mode focus
-            </button>
+            <div className="template-card-actions">
+              <button className="primary" onClick={() => setFocusMode(true)}>
+                Reprendre en mode focus
+              </button>
+              <button type="button" className="danger" onClick={cancelActiveSession}>
+                Annuler la séance
+              </button>
+            </div>
           </section>
         )}
         <div>
@@ -160,8 +192,12 @@ export function UserDashboard({ user }: { user: User }) {
                 </ul>
 
                 <div className="template-card-actions">
-                  <button className="primary" onClick={() => launch(template)}>
-                    Lancer
+                  <button
+                    className="primary"
+                    onClick={() => launch(template)}
+                    disabled={Boolean(launchingTemplateId)}
+                  >
+                    {launchingTemplateId === template.id ? "Lancement..." : "Lancer"}
                   </button>
                   <button type="button" onClick={() => setEditingTemplate(template)}>
                     Modifier
@@ -195,6 +231,16 @@ export function UserDashboard({ user }: { user: User }) {
               <span>
                 {s.status} · {s.exercises.length} exercices
               </span>
+
+              {s.status === "IN_PROGRESS" ? (
+                <button type="button" className="danger" onClick={() => api.updateSessionStatus(s.id, "CANCELLED").then(refresh)}>
+                  Annuler
+                </button>
+              ) : (
+                <button type="button" className="danger" onClick={() => deleteSession(s)}>
+                  Supprimer
+                </button>
+              )}
             </div>
           ))}
 

@@ -68,7 +68,7 @@ export function WorkoutExecutionScreen({
   onExitFocus,
 }: {
   session: WorkoutSession;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   onExitFocus?: () => void;
 }) {
   const warmupStorageKey = `warmup-done-${session.id}`;
@@ -103,7 +103,8 @@ export function WorkoutExecutionScreen({
   async function completeWorkout() {
     await api.updateSessionStatus(session.id, "COMPLETED");
     localStorage.removeItem(warmupStorageKey);
-    onRefresh();
+    await Promise.resolve(onRefresh());
+    onExitFocus?.();
   }
 
   if (step === "warmup") {

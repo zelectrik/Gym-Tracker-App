@@ -6,6 +6,7 @@ import {
   createTemplateHandler,
   updateTemplateHandler,
   deleteTemplateHandler,
+  deleteSessionHandler,
   getLastExercisePerformanceHandler,
   getSessionsHandler,
   getTemplatesHandler,
@@ -26,6 +27,7 @@ router.get("/exercises/:exerciseId/last-performance", getLastExercisePerformance
 router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);
 router.patch("/sessions/:sessionId/status", updateSessionStatusHandler);
+router.delete("/sessions/:sessionId", deleteSessionHandler);
 router.post("/session-exercises/:sessionExerciseId/sets", addSetHandler);
 router.put("/session-exercises/:sessionExerciseId/cardio-entry", upsertCardioEntryHandler);
 

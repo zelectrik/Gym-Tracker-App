@@ -163,6 +163,10 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+  deleteSession: (sessionId: string) =>
+    request(`/workouts/sessions/${sessionId}`, {
+      method: "DELETE",
+    }),
   addSet: (
     sessionExerciseId: string,
     body: {
