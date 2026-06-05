@@ -1599,3 +1599,138 @@ button.danger:hover,
     display: grid;
   }
 }
+
+/* ===== SIMPLIFIED DASHBOARD NAVIGATION ===== */
+.simplified-dashboard {
+  padding-bottom: 92px;
+}
+
+.dashboard-home-card {
+  gap: 18px;
+}
+
+.dashboard-tabs {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+.dashboard-tabs button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 8px;
+  font-weight: 900;
+  background: #eef2f7;
+  color: #0f172a;
+}
+
+.dashboard-tabs button.active {
+  background: #2563eb;
+  color: white;
+}
+
+.active-session-banner {
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  background: #eff6ff;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.active-session-banner h3 {
+  margin: 8px 0 0;
+}
+
+.dashboard-quick-stats {
+  width: 100%;
+}
+
+.workout-template-card {
+  display: grid;
+  gap: 12px;
+}
+
+.clean-history-list > div {
+  align-items: center;
+}
+
+/* Make live session actions visible and tappable inside one-page mode */
+.exercise-mobile-list.scroll-list {
+  overflow-y: auto;
+  padding-right: 4px;
+  padding-bottom: 10px;
+}
+
+.focus-exercise-item.live-exercise-item {
+  min-height: unset;
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: visible;
+  padding: 12px;
+}
+
+.focus-exercise-item.live-exercise-item > div {
+  display: block;
+  width: auto;
+}
+
+.live-exercise-main {
+  min-height: 56px;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.live-exercise-main div {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.live-exercise-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.live-exercise-actions button {
+  min-height: 42px;
+  border-radius: 12px;
+  padding: 8px;
+  font-weight: 900;
+}
+
+@media (max-width: 640px) {
+  .dashboard-tabs {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    border-radius: 22px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  }
+
+  .dashboard-tabs button {
+    font-size: 12px;
+    padding: 10px 4px;
+  }
+
+  .active-session-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workout-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+}
