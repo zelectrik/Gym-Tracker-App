@@ -1734,3 +1734,46 @@ button.danger:hover,
     grid-template-columns: 1fr;
   }
 }
+
+.history-row-with-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.history-session-open {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.history-session-open:hover b {
+  text-decoration: underline;
+}
+
+.exportable-template-card {
+  position: relative;
+}
+
+.template-export-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  font-weight: 800;
+  color: #2f5fe8;
+}
+
+.template-export-checkbox input {
+  width: auto;
+  accent-color: #2f5fe8;
+}

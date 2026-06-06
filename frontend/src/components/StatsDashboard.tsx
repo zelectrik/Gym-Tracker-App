@@ -258,7 +258,7 @@ function MiniChart({
   );
 }
 
-function WorkoutSessionDetail({
+export function WorkoutSessionDetail({
   session,
   onClose,
   onSelectExercise,

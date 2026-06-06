@@ -11,7 +11,7 @@ import { modeLabels } from "../utils/workoutLabels";
 import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
-import { StatsDashboard } from "./StatsDashboard";
+import { StatsDashboard, WorkoutSessionDetail } from "./StatsDashboard";
 
 type DashboardTab = "sessions" | "history" | "exercises" | "programs";
 
@@ -58,6 +58,41 @@ function TabButton({
   );
 }
 
+function downloadJsonFile(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function templateToImportProgram(template: WorkoutTemplate) {
+  return {
+    name: template.name,
+    type: template.description ?? undefined,
+    exercises: template.exercises
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((item) => ({
+        exerciseName: item.exercise.name,
+        reference: item.exercise.name,
+        category: item.exercise.type,
+        sets: item.targetSets,
+        ...(item.targetDurationSec
+          ? { durationSeconds: item.targetDurationSec }
+          : { reps: item.targetReps ?? 10 }),
+        ...(item.executionMode === "LEFT_RIGHT" ? { unilateral: true } : {}),
+        muscles: item.exercise.muscles ?? [],
+      })),
+  };
+}
+
 export function UserDashboard({ user }: { user: User }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
@@ -70,6 +105,9 @@ export function UserDashboard({ user }: { user: User }) {
     null,
   );
   const [activeTab, setActiveTab] = useState<DashboardTab>("sessions");
+  const [selectedHistorySession, setSelectedHistorySession] =
+    useState<WorkoutSession | null>(null);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
   const completedSessions = useMemo(
@@ -151,7 +189,31 @@ export function UserDashboard({ user }: { user: User }) {
 
     await api.deleteTemplate(template.id);
     if (editingTemplate?.id === template.id) setEditingTemplate(null);
+    setSelectedTemplateIds((ids) => ids.filter((id) => id !== template.id));
     await refresh();
+  }
+
+  function toggleTemplateSelection(templateId: string) {
+    setSelectedTemplateIds((ids) =>
+      ids.includes(templateId)
+        ? ids.filter((id) => id !== templateId)
+        : [...ids, templateId],
+    );
+  }
+
+  function exportSelectedTemplates() {
+    const selectedTemplates = templates.filter((template) =>
+      selectedTemplateIds.includes(template.id),
+    );
+
+    if (!selectedTemplates.length) {
+      alert("Sélectionne au moins un programme à exporter.");
+      return;
+    }
+
+    downloadJsonFile("gym-tracker-programmes.json", {
+      program: selectedTemplates.map(templateToImportProgram),
+    });
   }
 
   const renderTemplateCard = (template: WorkoutTemplate) => (
@@ -302,16 +364,33 @@ export function UserDashboard({ user }: { user: User }) {
             mode="history"
           />
 
+          {selectedHistorySession && (
+            <WorkoutSessionDetail
+              session={selectedHistorySession}
+              onClose={() => setSelectedHistorySession(null)}
+              onSelectExercise={() => {
+                setSelectedHistorySession(null);
+                setActiveTab("exercises");
+              }}
+            />
+          )}
+
           <section className="card">
             <h3>Historique complet</h3>
             <div className="history clean-history-list">
               {completedSessions.map((session) => (
-                <div key={session.id}>
-                  <b>{session.title}</b>
-                  <span>
-                    {formatSessionDate(getCompletedAt(session))} ·{" "}
-                    {session.exercises.length} exercices
-                  </span>
+                <div key={session.id} className="history-row-with-actions">
+                  <button
+                    type="button"
+                    className="history-session-open"
+                    onClick={() => setSelectedHistorySession(session)}
+                  >
+                    <b>{session.title}</b>
+                    <span>
+                      {formatSessionDate(getCompletedAt(session))} ·{" "}
+                      {session.exercises.length} exercices
+                    </span>
+                  </button>
                   <button
                     type="button"
                     className="danger"
@@ -352,10 +431,46 @@ export function UserDashboard({ user }: { user: User }) {
 
           {!editingTemplate && (
             <section className="card">
-              <h3>Programmes enregistrés</h3>
+              <div className="section-title">
+                <div>
+                  <h3>Programmes enregistrés</h3>
+                  <p>Sélectionne un ou plusieurs programmes pour les exporter au format JSON réimportable.</p>
+                </div>
+                <div className="template-card-actions">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTemplateIds(templates.map((template) => template.id))}
+                  >
+                    Tout sélectionner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTemplateIds([])}
+                    disabled={!selectedTemplateIds.length}
+                  >
+                    Vider
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={exportSelectedTemplates}
+                    disabled={!selectedTemplateIds.length}
+                  >
+                    Exporter JSON
+                  </button>
+                </div>
+              </div>
               <div className="cards">
                 {templates.map((template) => (
-                  <article className="mini-card" key={template.id}>
+                  <article className="mini-card exportable-template-card" key={template.id}>
+                    <label className="template-export-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={selectedTemplateIds.includes(template.id)}
+                        onChange={() => toggleTemplateSelection(template.id)}
+                      />
+                      Exporter
+                    </label>
                     <h4>{template.name}</h4>
                     {template.description && <p>{template.description}</p>}
                     <p>{template.exercises.length} exercices planifiés</p>
