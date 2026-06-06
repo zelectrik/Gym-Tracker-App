@@ -437,15 +437,40 @@ export function WorkoutSessionDetail({
   );
 }
 
-function getLast30Days() {
-  const days: Date[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function toInputDate(date: Date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy.toISOString().slice(0, 10);
+}
 
-  for (let index = 29; index >= 0; index -= 1) {
-    const day = new Date(today);
-    day.setDate(today.getDate() - index);
-    days.push(day);
+function getDefaultDateRange() {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+
+  return {
+    startDate: toInputDate(start),
+    endDate: toInputDate(end),
+  };
+}
+
+function getDateRangeDays(startDate: string, endDate: string) {
+  const days: Date[] = [];
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return days;
+  }
+
+  const cursor = start <= end ? new Date(start) : new Date(end);
+  const limit = start <= end ? end : start;
+
+  while (cursor <= limit) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
 
   return days;
@@ -590,6 +615,17 @@ export function StatsDashboard({
   const [selectedSession, setSelectedSession] = useState<WorkoutSession | null>(
     null,
   );
+  const defaultDateRange = useMemo(() => getDefaultDateRange(), []);
+  const [calendarStartDate, setCalendarStartDate] = useState(
+    defaultDateRange.startDate,
+  );
+  const [calendarEndDate, setCalendarEndDate] = useState(
+    defaultDateRange.endDate,
+  );
+  const calendarDays = useMemo(
+    () => getDateRangeDays(calendarStartDate, calendarEndDate),
+    [calendarStartDate, calendarEndDate],
+  );
   const completedSessions = useMemo(
     () => sessions.filter((session) => session.status === "COMPLETED"),
     [sessions],
@@ -626,13 +662,32 @@ export function StatsDashboard({
           <div className="section-title">
             <div>
               <span className="pill">Calendrier</span>
-              <h3>Calendrier du dernier mois</h3>
-              <p>Chaque carte ouvre le détail de la séance.</p>
+              <h3>Historique des séances</h3>
+              <p>Choisis une période et ouvre le détail d’une séance.</p>
             </div>
           </div>
 
+          <div className="calendar-range-controls">
+            <label>
+              Début
+              <input
+                type="date"
+                value={calendarStartDate}
+                onChange={(event) => setCalendarStartDate(event.target.value)}
+              />
+            </label>
+            <label>
+              Fin
+              <input
+                type="date"
+                value={calendarEndDate}
+                onChange={(event) => setCalendarEndDate(event.target.value)}
+              />
+            </label>
+          </div>
+
           <div className="workout-calendar-grid">
-            {getLast30Days().map((day) => {
+            {calendarDays.map((day) => {
               const key = dateKey(day.toISOString());
               const daySessions = sessionsByDay.get(key) ?? [];
               return (

@@ -1867,3 +1867,28 @@ button.danger:hover,
   width: auto;
   accent-color: #2f5fe8;
 }
+
+.calendar-range-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+
+.calendar-range-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.calendar-range-controls input {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .calendar-range-controls {
+    grid-template-columns: 1fr;
+  }
+}
