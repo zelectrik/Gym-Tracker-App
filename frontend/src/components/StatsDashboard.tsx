@@ -6,9 +6,21 @@ import type {
   WorkoutSession,
 } from "../types";
 
+function formatLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function dateKey(value?: string | null) {
   if (!value) return "";
-  return new Date(value).toISOString().slice(0, 10);
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return formatLocalDateKey(date);
 }
 
 function formatShortDate(date: Date) {
@@ -440,7 +452,8 @@ export function WorkoutSessionDetail({
 function toInputDate(date: Date) {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
-  return copy.toISOString().slice(0, 10);
+
+  return formatLocalDateKey(copy);
 }
 
 function getDefaultDateRange() {
