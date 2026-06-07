@@ -19,34 +19,16 @@ export function Shell({
   return (
     <>
       {!isWorkoutFocus && (
-        <header className="topbar">
-          <div>
-            <strong>Gym Tracker</strong>
-
-            <span>
-              {user.displayName} · {user.role}
-            </span>
-          </div>
-
-          <nav>
+        <header className="topbar app-topbar-v2">
+          {user.role === "SUPER_ADMIN" && (
             <button
-              className={page === "user" ? "active" : ""}
-              onClick={() => setPage("user")}
+              className={page === "admin" ? "active" : ""}
+              onClick={() => setPage(page === "admin" ? "user" : "admin")}
             >
-              Dashboard user
+              {page === "admin" ? "Dashboard" : "Admin"}
             </button>
-
-            {user.role === "SUPER_ADMIN" && (
-              <button
-                className={page === "admin" ? "active" : ""}
-                onClick={() => setPage("admin")}
-              >
-                Super admin
-              </button>
-            )}
-
-            <button onClick={onLogout}>Déconnexion</button>
-          </nav>
+          )}
+          <button onClick={onLogout}>Déconnexion</button>
         </header>
       )}
 

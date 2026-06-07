@@ -14,12 +14,8 @@ import { ImportProgramJson } from "./ImportProgramJson";
 import { StatsDashboard, WorkoutSessionDetail } from "./StatsDashboard";
 import { PhysicalTrackingDashboard } from "./PhysicalTrackingDashboard";
 
-type DashboardTab =
-  | "sessions"
-  | "history"
-  | "exercises"
-  | "programs"
-  | "physical";
+type DashboardTab = "sessions" | "history" | "exercises" | "programs" | "physical";
+type DashboardDomain = "gym" | "physical";
 
 function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
   if (item.targetDurationSec) {
@@ -32,10 +28,19 @@ function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
   return `${item.targetReps ?? "?"} reps`;
 }
 
+function estimateTemplateDuration(template: WorkoutTemplate) {
+  const exerciseMinutes = template.exercises.reduce((total, item) => {
+    if (item.targetDurationSec) return total + Math.ceil(item.targetDurationSec / 60);
+    return total + item.targetSets * 3;
+  }, 0);
+
+  if (!exerciseMinutes) return null;
+  const rounded = Math.max(10, Math.round(exerciseMinutes / 5) * 5);
+  return `~${rounded} min`;
+}
+
 function getCompletedAt(session: WorkoutSession) {
-  return (
-    session.completedAt ?? session.createdAt ?? session.scheduledAt ?? null
-  );
+  return session.completedAt ?? session.createdAt ?? session.scheduledAt ?? null;
 }
 
 function formatSessionDate(value?: string | null) {
@@ -105,21 +110,20 @@ export function UserDashboard({ user }: { user: User }) {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [focusMode, setFocusMode] = useState(true);
-  const [editingTemplate, setEditingTemplate] =
-    useState<WorkoutTemplate | null>(null);
-  const [launchingTemplateId, setLaunchingTemplateId] = useState<string | null>(
-    null,
-  );
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
+  const [launchingTemplateId, setLaunchingTemplateId] = useState<string | null>(null);
+  const [activeDomain, setActiveDomain] = useState<DashboardDomain>("gym");
   const [activeTab, setActiveTab] = useState<DashboardTab>("sessions");
-  const [selectedHistorySession, setSelectedHistorySession] =
-    useState<WorkoutSession | null>(null);
+  const [selectedHistorySession, setSelectedHistorySession] = useState<WorkoutSession | null>(null);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
+  const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
   const completedSessions = useMemo(
     () => sessions.filter((session) => session.status === "COMPLETED"),
     [sessions],
   );
+  const recentCompletedSessions = completedSessions.slice(0, 3);
 
   async function refresh() {
     const [ex, tpl, ses, prog] = await Promise.all([
@@ -148,6 +152,16 @@ export function UserDashboard({ user }: { user: User }) {
         onExitFocus={() => setFocusMode(false)}
       />
     );
+  }
+
+  function openGymTab(tab: Exclude<DashboardTab, "physical">) {
+    setActiveDomain("gym");
+    setActiveTab(tab);
+  }
+
+  function openPhysical() {
+    setActiveDomain("physical");
+    setActiveTab("physical");
   }
 
   async function launch(template: WorkoutTemplate) {
@@ -180,9 +194,7 @@ export function UserDashboard({ user }: { user: User }) {
   }
 
   async function deleteSession(session: WorkoutSession) {
-    const confirmed = confirm(
-      `Supprimer la séance "${session.title}" de l'historique ?`,
-    );
+    const confirmed = confirm(`Supprimer la séance "${session.title}" de l'historique ?`);
     if (!confirmed) return;
 
     await api.deleteSession(session.id);
@@ -199,6 +211,14 @@ export function UserDashboard({ user }: { user: User }) {
     await refresh();
   }
 
+  function toggleTemplateDetails(templateId: string) {
+    setExpandedTemplateIds((ids) =>
+      ids.includes(templateId)
+        ? ids.filter((id) => id !== templateId)
+        : [...ids, templateId],
+    );
+  }
+
   function toggleTemplateSelection(templateId: string) {
     setSelectedTemplateIds((ids) =>
       ids.includes(templateId)
@@ -208,9 +228,7 @@ export function UserDashboard({ user }: { user: User }) {
   }
 
   function exportSelectedTemplates() {
-    const selectedTemplates = templates.filter((template) =>
-      selectedTemplateIds.includes(template.id),
-    );
+    const selectedTemplates = templates.filter((template) => selectedTemplateIds.includes(template.id));
 
     if (!selectedTemplates.length) {
       alert("Sélectionne au moins un programme à exporter.");
@@ -222,159 +240,146 @@ export function UserDashboard({ user }: { user: User }) {
     });
   }
 
-  const renderTemplateCard = (template: WorkoutTemplate) => (
-    <article className="mini-card workout-template-card" key={template.id}>
-      <div>
-        <h4>{template.name}</h4>
-        {template.description && <p>{template.description}</p>}
-        <p>{template.exercises.length} exercices planifiés</p>
-      </div>
+  const renderTemplateCard = (template: WorkoutTemplate) => {
+    const isExpanded = expandedTemplateIds.includes(template.id);
+    const duration = estimateTemplateDuration(template);
 
-      <ul className="template-summary">
-        {template.exercises.slice(0, 4).map((item) => (
-          <li key={item.id}>
-            {item.position}. {item.exercise.name} · {item.targetSets}×
-            {formatTemplateTarget(item)} · {modeLabels[item.executionMode]}
-          </li>
-        ))}
-      </ul>
-
-      <div className="template-card-actions">
-        <button
-          className="primary"
-          onClick={() => launch(template)}
-          disabled={Boolean(launchingTemplateId)}
-        >
-          {launchingTemplateId === template.id ? "Lancement..." : "Lancer"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingTemplate(template);
-            setActiveTab("programs");
-          }}
-        >
-          Modifier
-        </button>
-      </div>
-    </article>
-  );
-
-  return (
-    <main className="layout simplified-dashboard">
-      <section className="card dashboard-head dashboard-home-card">
-        {active && (
-          <section className="active-session-banner">
-            <div>
-              <span className="pill">Séance en cours</span>
-              <h3>{active.title}</h3>
-            </div>
-            <div className="template-card-actions">
-              <button className="primary" onClick={() => setFocusMode(true)}>
-                Reprendre
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={cancelActiveSession}
-              >
-                Annuler
-              </button>
-            </div>
-          </section>
-        )}
-
-        <div>
-          <span className="pill">Gym Tracker</span>
-          <h2>Bonjour {user.displayName}</h2>
-          <p>
-            Lance ta séance, consulte ton historique ou ajuste tes programmes.
-          </p>
+    return (
+      <article className="mini-card workout-template-card compact-template-card" key={template.id}>
+        <div className="compact-template-main">
+          <div>
+            <h4>{template.name}</h4>
+            <p>
+              {template.exercises.length} exos
+              {duration ? ` · ${duration}` : ""}
+            </p>
+            {template.description && <small>{template.description}</small>}
+          </div>
+          <button
+            className="primary compact-launch-button"
+            onClick={() => launch(template)}
+            disabled={Boolean(launchingTemplateId)}
+          >
+            {launchingTemplateId === template.id ? "..." : "Lancer"}
+          </button>
         </div>
 
-        {progress && (
-          <div className="stats dashboard-quick-stats">
-            <div>
-              <b>{progress.totalSessions}</b>
-              <span>séances finies</span>
-            </div>
-            <div>
-              <b>{progress.totalSets}</b>
-              <span>séries validées</span>
-            </div>
-            <div>
-              <b>{Math.round(progress.totalVolumeKg)}</b>
-              <span>kg volume</span>
-            </div>
-          </div>
+        {isExpanded && (
+          <ul className="template-summary compact-template-summary">
+            {template.exercises.map((item) => (
+              <li key={item.id}>
+                {item.position}. {item.exercise.name} · {item.targetSets}×
+                {formatTemplateTarget(item)} · {modeLabels[item.executionMode]}
+              </li>
+            ))}
+          </ul>
         )}
-      </section>
 
-      <nav className="dashboard-tabs card" aria-label="Navigation dashboard">
-        <TabButton
-          active={activeTab === "sessions"}
-          onClick={() => setActiveTab("sessions")}
-        >
-          Séances
-        </TabButton>
-        <TabButton
-          active={activeTab === "history"}
-          onClick={() => setActiveTab("history")}
-        >
-          Historique
-        </TabButton>
-        <TabButton
-          active={activeTab === "exercises"}
-          onClick={() => setActiveTab("exercises")}
-        >
-          Exercices
-        </TabButton>
-        <TabButton
-          active={activeTab === "programs"}
-          onClick={() => setActiveTab("programs")}
-        >
-          Programmes
-        </TabButton>
-        <TabButton
-          active={activeTab === "physical"}
-          onClick={() => setActiveTab("physical")}
-        >
-          Physique
-        </TabButton>
-      </nav>
+        <div className="template-card-actions compact-template-actions">
+          <button type="button" onClick={() => toggleTemplateDetails(template.id)}>
+            {isExpanded ? "Masquer" : "Détails"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingTemplate(template);
+              openGymTab("programs");
+            }}
+          >
+            Modifier
+          </button>
+        </div>
+      </article>
+    );
+  };
 
-      {activeTab === "sessions" && (
-        <section className="card">
-          <div className="section-title">
-            <div>
-              <span className="pill">Séances</span>
-              <h3>Lancer un entraînement</h3>
-              <p>
-                Dashboard volontairement simple : tu choisis un programme et tu
-                lances.
-              </p>
-            </div>
-            <button type="button" onClick={() => setActiveTab("programs")}>
-              Gérer les programmes
-            </button>
+  return (
+    <main className="layout simplified-dashboard app-dashboard-v2">
+      {active && (
+        <section className="active-session-banner compact-active-session">
+          <div>
+            <span className="pill">Séance en cours</span>
+            <h3>{active.title}</h3>
           </div>
-
-          <div className="cards">
-            {templates.map(renderTemplateCard)}
-            {templates.length === 0 && (
-              <p>Aucun entraînement enregistré pour le moment.</p>
-            )}
+          <div className="template-card-actions">
+            <button className="primary" onClick={() => setFocusMode(true)}>
+              Reprendre
+            </button>
+            <button type="button" className="danger" onClick={cancelActiveSession}>
+              Annuler
+            </button>
           </div>
         </section>
       )}
 
-      {activeTab === "history" && (
+      <nav className="domain-switch card" aria-label="Domaine">
+        <button
+          type="button"
+          className={activeDomain === "gym" ? "active" : ""}
+          onClick={() => openGymTab("sessions")}
+        >
+          Gym
+        </button>
+        <button
+          type="button"
+          className={activeDomain === "physical" ? "active" : ""}
+          onClick={openPhysical}
+        >
+          Physique
+        </button>
+      </nav>
+
+      {activeDomain === "gym" && activeTab === "sessions" && (
+        <section className="card sessions-home-card">
+          <div className="section-title compact-section-title">
+            <div>
+              <span className="pill">Aujourd'hui</span>
+              <h3>Quel entraînement ?</h3>
+              <p>Lance vite ta séance, les détails restent masqués pour gagner de la place.</p>
+            </div>
+          </div>
+
+          {progress && (
+            <div className="session-micro-stats">
+              <span>{progress.totalSessions} séances</span>
+              <span>{progress.totalSets} séries</span>
+              <span>{Math.round(progress.totalVolumeKg)} kg</span>
+            </div>
+          )}
+
+          <div className="cards compact-session-list">
+            {templates.map(renderTemplateCard)}
+            {templates.length === 0 && <p>Aucun entraînement enregistré pour le moment.</p>}
+          </div>
+
+          {recentCompletedSessions.length > 0 && (
+            <div className="recent-sessions-strip">
+              <h4>Récent</h4>
+              {recentCompletedSessions.map((session) => (
+                <button
+                  key={session.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedHistorySession(session);
+                    openGymTab("history");
+                  }}
+                >
+                  <b>{session.title}</b>
+                  <span>{formatSessionDate(getCompletedAt(session))}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button type="button" className="manage-programs-button" onClick={() => openGymTab("programs")}>
+            Gérer les programmes
+          </button>
+        </section>
+      )}
+
+      {activeDomain === "gym" && activeTab === "history" && (
         <>
-          <StatsDashboard
-            sessions={sessions}
-            exercises={exercises}
-            mode="history"
-          />
+          <StatsDashboard sessions={sessions} exercises={exercises} mode="history" />
 
           {selectedHistorySession && (
             <WorkoutSessionDetail
@@ -382,7 +387,7 @@ export function UserDashboard({ user }: { user: User }) {
               onClose={() => setSelectedHistorySession(null)}
               onSelectExercise={() => {
                 setSelectedHistorySession(null);
-                setActiveTab("exercises");
+                openGymTab("exercises");
               }}
             />
           )}
@@ -399,36 +404,25 @@ export function UserDashboard({ user }: { user: User }) {
                   >
                     <b>{session.title}</b>
                     <span>
-                      {formatSessionDate(getCompletedAt(session))} ·{" "}
-                      {session.exercises.length} exercices
+                      {formatSessionDate(getCompletedAt(session))} · {session.exercises.length} exercices
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => deleteSession(session)}
-                  >
+                  <button type="button" className="danger" onClick={() => deleteSession(session)}>
                     Supprimer
                   </button>
                 </div>
               ))}
-              {completedSessions.length === 0 && (
-                <p>Aucune séance terminée pour le moment.</p>
-              )}
+              {completedSessions.length === 0 && <p>Aucune séance terminée pour le moment.</p>}
             </div>
           </section>
         </>
       )}
 
-      {activeTab === "exercises" && (
-        <StatsDashboard
-          sessions={sessions}
-          exercises={exercises}
-          mode="exercises"
-        />
+      {activeDomain === "gym" && activeTab === "exercises" && (
+        <StatsDashboard sessions={sessions} exercises={exercises} mode="exercises" />
       )}
 
-      {activeTab === "programs" && (
+      {activeDomain === "gym" && activeTab === "programs" && (
         <>
           {!editingTemplate && <ImportProgramJson onImported={refresh} />}
           <CreateTemplate
@@ -446,45 +440,23 @@ export function UserDashboard({ user }: { user: User }) {
               <div className="section-title">
                 <div>
                   <h3>Programmes enregistrés</h3>
-                  <p>
-                    Sélectionne un ou plusieurs programmes pour les exporter au
-                    format JSON réimportable.
-                  </p>
+                  <p>Sélectionne un ou plusieurs programmes pour les exporter au format JSON réimportable.</p>
                 </div>
                 <div className="template-card-actions">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedTemplateIds(
-                        templates.map((template) => template.id),
-                      )
-                    }
-                  >
+                  <button type="button" onClick={() => setSelectedTemplateIds(templates.map((template) => template.id))}>
                     Tout sélectionner
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTemplateIds([])}
-                    disabled={!selectedTemplateIds.length}
-                  >
+                  <button type="button" onClick={() => setSelectedTemplateIds([])} disabled={!selectedTemplateIds.length}>
                     Vider
                   </button>
-                  <button
-                    type="button"
-                    className="primary"
-                    onClick={exportSelectedTemplates}
-                    disabled={!selectedTemplateIds.length}
-                  >
+                  <button type="button" className="primary" onClick={exportSelectedTemplates} disabled={!selectedTemplateIds.length}>
                     Exporter JSON
                   </button>
                 </div>
               </div>
               <div className="cards">
                 {templates.map((template) => (
-                  <article
-                    className="mini-card exportable-template-card"
-                    key={template.id}
-                  >
+                  <article className="mini-card exportable-template-card" key={template.id}>
                     <label className="template-export-checkbox">
                       <input
                         type="checkbox"
@@ -497,17 +469,10 @@ export function UserDashboard({ user }: { user: User }) {
                     {template.description && <p>{template.description}</p>}
                     <p>{template.exercises.length} exercices planifiés</p>
                     <div className="template-card-actions">
-                      <button
-                        type="button"
-                        onClick={() => setEditingTemplate(template)}
-                      >
+                      <button type="button" onClick={() => setEditingTemplate(template)}>
                         Modifier
                       </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={() => deleteTemplate(template)}
-                      >
+                      <button type="button" className="danger" onClick={() => deleteTemplate(template)}>
                         Supprimer
                       </button>
                     </div>
@@ -519,7 +484,33 @@ export function UserDashboard({ user }: { user: User }) {
         </>
       )}
 
-      {activeTab === "physical" && <PhysicalTrackingDashboard />}
+      {activeDomain === "physical" && <PhysicalTrackingDashboard />}
+
+      <nav
+        className={`dashboard-tabs card ${activeDomain === "physical" ? "physical-footer-tabs" : "gym-footer-tabs"}`}
+        aria-label="Navigation principale"
+      >
+        {activeDomain === "gym" ? (
+          <>
+            <TabButton active={activeTab === "sessions"} onClick={() => openGymTab("sessions")}>
+              Séances
+            </TabButton>
+            <TabButton active={activeTab === "history"} onClick={() => openGymTab("history")}>
+              Historique
+            </TabButton>
+            <TabButton active={activeTab === "exercises"} onClick={() => openGymTab("exercises")}>
+              Exercices
+            </TabButton>
+            <TabButton active={activeTab === "programs"} onClick={() => openGymTab("programs")}>
+              Programmes
+            </TabButton>
+          </>
+        ) : (
+          <TabButton active={activeTab === "physical"} onClick={openPhysical}>
+            Physique
+          </TabButton>
+        )}
+      </nav>
     </main>
   );
 }

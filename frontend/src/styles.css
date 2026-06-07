@@ -2382,3 +2382,266 @@ button.danger:hover,
   border-color: #e2e8f0;
   background: #f8fafc;
 }
+
+/* ===== APP MOBILE REFOCUS V25 ===== */
+.app-topbar-v2 {
+  justify-content: flex-end;
+  min-height: 46px;
+  padding: 8px 14px;
+  gap: 8px;
+}
+
+.app-topbar-v2 button {
+  min-height: 36px;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.app-dashboard-v2 {
+  margin-top: 14px;
+  gap: 12px;
+  padding-bottom: 108px;
+}
+
+.domain-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px;
+  position: sticky;
+  top: 56px;
+  z-index: 18;
+}
+
+.domain-switch button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: #eef2f7;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.domain-switch button.active {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.sessions-home-card {
+  display: grid;
+  gap: 14px;
+}
+
+.compact-section-title {
+  align-items: flex-start;
+}
+
+.compact-section-title h3 {
+  margin: 6px 0 4px;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.05;
+}
+
+.compact-section-title p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.session-micro-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.session-micro-stats span {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.compact-session-list {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.compact-template-card {
+  padding: 12px;
+  gap: 10px;
+  border-radius: 20px;
+  background: #ffffff;
+}
+
+.compact-template-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(118px, 34%);
+  gap: 10px;
+  align-items: center;
+}
+
+.compact-template-main h4 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+.compact-template-main p {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.compact-template-main small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-launch-button {
+  min-height: 56px;
+  border-radius: 18px;
+  font-size: 18px;
+}
+
+.compact-template-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.compact-template-actions button {
+  min-height: 42px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.compact-template-summary {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px 10px 10px 22px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.recent-sessions-strip {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.recent-sessions-strip h4 {
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.recent-sessions-strip button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  border-radius: 14px;
+  background: #f8fafc;
+  font-size: 13px;
+  text-align: left;
+}
+
+.recent-sessions-strip span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.manage-programs-button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  background: #eef2f7;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.compact-active-session {
+  margin-bottom: 0;
+}
+
+.gym-footer-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.physical-footer-tabs {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 640px) {
+  .app-topbar-v2 {
+    position: sticky;
+    top: 0;
+  }
+
+  .app-dashboard-v2 {
+    width: min(100% - 20px, 680px);
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  .domain-switch {
+    top: 54px;
+    border-radius: 20px;
+  }
+
+  .dashboard-tabs.physical-footer-tabs {
+    left: 22%;
+    right: 22%;
+  }
+
+  .dashboard-tabs button {
+    min-height: 54px;
+    font-size: 13px;
+    border-radius: 18px;
+  }
+
+  .compact-template-main {
+    grid-template-columns: minmax(0, 1fr) 116px;
+  }
+
+  .compact-template-main h4 {
+    font-size: 18px;
+  }
+
+  .compact-launch-button {
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .session-micro-stats span {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 390px) {
+  .compact-template-main {
+    grid-template-columns: 1fr;
+  }
+}
