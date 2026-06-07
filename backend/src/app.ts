@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth.routes";
 import exerciseRoutes from "./routes/exercise.routes";
 import workoutRoutes from "./routes/workout.routes";
 import progressRoutes from "./routes/progress.routes";
+import bodyRoutes from "./routes/body.routes";
 
 export const app = express();
 app.use(cors());
@@ -15,3 +16,4 @@ app.use("/auth", authRoutes);
 app.use("/exercises", exerciseRoutes);
 app.use("/workouts", workoutRoutes);
 app.use("/progress", progressRoutes);
+app.use("/body", bodyRoutes);

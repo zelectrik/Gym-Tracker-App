@@ -1892,3 +1892,116 @@ button.danger:hover,
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== PHYSICAL TRACKING ===== */
+.physical-dashboard {
+  display: grid;
+  gap: 18px;
+}
+
+.physical-hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.physical-latest-card {
+  min-width: 150px;
+  padding: 16px;
+  border: 1px solid #dbe7ff;
+  border-radius: 18px;
+  background: #f6f9ff;
+}
+
+.physical-latest-card span,
+.physical-stats-grid span {
+  display: block;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.physical-latest-card b {
+  display: block;
+  margin-top: 4px;
+}
+
+.physical-latest-card p {
+  margin: 8px 0 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.body-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.body-form .wide {
+  grid-column: 1 / -1;
+}
+
+.physical-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.physical-stats-grid div {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.physical-stats-grid b {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+}
+
+.physical-stats-grid small {
+  display: block;
+  margin-top: 4px;
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.body-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.body-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.body-history-item span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .physical-hero-card {
+    grid-template-columns: 1fr;
+  }
+
+  .body-form {
+    grid-template-columns: 1fr;
+  }
+
+  .body-history-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

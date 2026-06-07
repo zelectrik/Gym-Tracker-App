@@ -193,6 +193,35 @@ export type ImportProgramResult = {
   templates: WorkoutTemplate[];
 };
 
+
+export type BodySnapshot = {
+  id: string;
+  userId: string;
+  measuredAt: string;
+  weightKg?: number | null;
+  neckCm?: number | null;
+  chestCm?: number | null;
+  waistCm?: number | null;
+  hipsCm?: number | null;
+  armCm?: number | null;
+  thighCm?: number | null;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type BodySnapshotPayload = {
+  measuredAt: string;
+  weightKg?: number;
+  neckCm?: number;
+  chestCm?: number;
+  waistCm?: number;
+  hipsCm?: number;
+  armCm?: number;
+  thighCm?: number;
+  notes?: string;
+};
+
 export type LastExercisePerformance = {
   exerciseId: string;
   exerciseName: string;

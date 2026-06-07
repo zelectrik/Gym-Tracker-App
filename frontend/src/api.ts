@@ -14,6 +14,8 @@ import type {
   ImportProgramResult,
   LastExercisePerformance,
   CardioEntry,
+  BodySnapshot,
+  BodySnapshotPayload,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -234,4 +236,10 @@ export const api = {
       body: JSON.stringify(body),
     }),
   progress: () => request<Progress>("/progress"),
+  bodySnapshots: () => request<BodySnapshot[]>("/body/snapshots"),
+  saveBodySnapshot: (body: BodySnapshotPayload) =>
+    request<BodySnapshot>("/body/snapshots", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

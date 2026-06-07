@@ -12,8 +12,14 @@ import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 import { StatsDashboard, WorkoutSessionDetail } from "./StatsDashboard";
+import { PhysicalTrackingDashboard } from "./PhysicalTrackingDashboard";
 
-type DashboardTab = "sessions" | "history" | "exercises" | "programs";
+type DashboardTab =
+  | "sessions"
+  | "history"
+  | "exercises"
+  | "programs"
+  | "physical";
 
 function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
   if (item.targetDurationSec) {
@@ -329,6 +335,12 @@ export function UserDashboard({ user }: { user: User }) {
         >
           Programmes
         </TabButton>
+        <TabButton
+          active={activeTab === "physical"}
+          onClick={() => setActiveTab("physical")}
+        >
+          Physique
+        </TabButton>
       </nav>
 
       {activeTab === "sessions" && (
@@ -434,12 +446,19 @@ export function UserDashboard({ user }: { user: User }) {
               <div className="section-title">
                 <div>
                   <h3>Programmes enregistrés</h3>
-                  <p>Sélectionne un ou plusieurs programmes pour les exporter au format JSON réimportable.</p>
+                  <p>
+                    Sélectionne un ou plusieurs programmes pour les exporter au
+                    format JSON réimportable.
+                  </p>
                 </div>
                 <div className="template-card-actions">
                   <button
                     type="button"
-                    onClick={() => setSelectedTemplateIds(templates.map((template) => template.id))}
+                    onClick={() =>
+                      setSelectedTemplateIds(
+                        templates.map((template) => template.id),
+                      )
+                    }
                   >
                     Tout sélectionner
                   </button>
@@ -462,7 +481,10 @@ export function UserDashboard({ user }: { user: User }) {
               </div>
               <div className="cards">
                 {templates.map((template) => (
-                  <article className="mini-card exportable-template-card" key={template.id}>
+                  <article
+                    className="mini-card exportable-template-card"
+                    key={template.id}
+                  >
                     <label className="template-export-checkbox">
                       <input
                         type="checkbox"
@@ -496,6 +518,8 @@ export function UserDashboard({ user }: { user: User }) {
           )}
         </>
       )}
+
+      {activeTab === "physical" && <PhysicalTrackingDashboard />}
     </main>
   );
 }
