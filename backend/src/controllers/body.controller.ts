@@ -14,7 +14,6 @@ function isBodyGoalDatabaseError(error: unknown) {
   return (
     message.includes("bodygoal") ||
     message.includes("bodymetric") ||
-    message.includes("bodygoaltype") ||
     message.includes("the table") ||
     message.includes("does not exist") ||
     message.includes("p2021") ||

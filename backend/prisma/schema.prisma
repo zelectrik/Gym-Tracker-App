@@ -268,10 +268,12 @@ enum BodyMetric {
   HIPS_CM
   ARM_CM
   THIGH_CM
+  CHEST_WAIST_RATIO
 }
 
 enum BodyGoalType {
   LOSS
-  MAINTAIN
   GAIN
+  MAINTAIN_ABOVE
+  MAINTAIN_BELOW
 }

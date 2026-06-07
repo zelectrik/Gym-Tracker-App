@@ -230,16 +230,21 @@ export type BodyMetric =
   | "WAIST_CM"
   | "HIPS_CM"
   | "ARM_CM"
-  | "THIGH_CM";
+  | "THIGH_CM"
+  | "CHEST_WAIST_RATIO";
 
-export type BodyGoalType = "DECREASE" | "MAINTAIN" | "INCREASE";
+export type BodyGoalType =
+  | "LOSS"
+  | "GAIN"
+  | "MAINTAIN_ABOVE"
+  | "MAINTAIN_BELOW";
 
 export type BodyGoal = {
   id: string;
   userId: string;
   metric: BodyMetric;
-  level: number;
   goalType: BodyGoalType;
+  level: number;
   targetValue: number;
   tolerance?: number | null;
   deadline?: string | null;
@@ -251,10 +256,10 @@ export type BodyGoal = {
 
 export type BodyGoalPayload = {
   metric: BodyMetric;
-  level: number;
   goalType: BodyGoalType;
+  level?: number;
   targetValue: number;
-  tolerance?: number | null;
+  tolerance?: number;
   deadline?: string;
   notes?: string;
   isActive?: boolean;

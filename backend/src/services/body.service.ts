@@ -13,6 +13,10 @@ function toOptionalDeadline(value?: string) {
   return value ? new Date(`${value}T12:00:00.000Z`) : null;
 }
 
+function isMaintainGoal(goalType: CreateBodyGoalInput["goalType"]) {
+  return goalType === "MAINTAIN_ABOVE" || goalType === "MAINTAIN_BELOW";
+}
+
 export const listBodySnapshots = async (userId: string) => {
   return prisma.bodySnapshot.findMany({
     where: { userId },
@@ -66,30 +70,33 @@ export const listBodyGoals = async (userId: string) => {
 };
 
 export const upsertBodyGoal = async (userId: string, data: CreateBodyGoalInput) => {
+  const maintain = isMaintainGoal(data.goalType);
+  const level = maintain ? 0 : data.level;
+
   return prisma.bodyGoal.upsert({
     where: {
       userId_metric_level: {
         userId,
         metric: data.metric,
-        level: data.level,
+        level,
       },
     },
     update: {
       goalType: data.goalType,
       targetValue: data.targetValue,
       tolerance: data.tolerance,
-      deadline: toOptionalDeadline(data.deadline),
+      deadline: maintain ? null : toOptionalDeadline(data.deadline),
       notes: data.notes,
       isActive: data.isActive ?? true,
     },
     create: {
       userId,
       metric: data.metric,
-      level: data.level,
       goalType: data.goalType,
+      level,
       targetValue: data.targetValue,
       tolerance: data.tolerance,
-      deadline: toOptionalDeadline(data.deadline),
+      deadline: maintain ? null : toOptionalDeadline(data.deadline),
       notes: data.notes,
       isActive: data.isActive ?? true,
     },
