@@ -6,6 +6,200 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id                    String               @id @default(uuid())
+  email                 String               @unique
+  passwordHash          String
+  role                  UserRole             @default(USER)
+  displayName           String
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  bodyGoals             BodyGoal[]
+  bodySnapshots         BodySnapshot[]
+  workoutParticipations WorkoutParticipant[]
+  ownedTemplates        WorkoutTemplate[]    @relation("TemplateOwner")
+}
+
+model Exercise {
+  id                String               @id @default(uuid())
+  name              String               @unique
+  muscleGroup       MuscleGroup
+  description       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  muscles           String[]             @default([])
+  trackingType      ExerciseTrackingType @default(STRENGTH)
+  type              String               @default("machine")
+  progressionType   ProgressionType      @default(WEIGHT)
+  sessionExercises  SessionExercise[]
+  templateExercises TemplateExercise[]
+}
+
+model WorkoutTemplate {
+  id          String             @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  exercises   TemplateExercise[]
+  sessions    WorkoutSession[]
+  owner       User               @relation("TemplateOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model TemplateExercise {
+  id                String          @id @default(uuid())
+  workoutTemplateId String
+  exerciseId        String
+  position          Int
+  targetSets        Int
+  targetReps        Int?
+  targetDurationSec Int?
+  restSeconds       Int?
+  notes             String?
+  executionMode     ExecutionMode   @default(BILATERAL)
+  targetWeightKg    Float?
+  leftWeightKg      Float?
+  rightWeightKg     Float?
+  exercise          Exercise        @relation(fields: [exerciseId], references: [id])
+  workoutTemplate   WorkoutTemplate @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutTemplateId, position])
+  @@index([exerciseId])
+}
+
+model WorkoutSession {
+  id           String               @id @default(uuid())
+  title        String
+  status       WorkoutStatus        @default(PLANNED)
+  scheduledAt  DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  notes        String?
+  templateId   String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  exercises    SessionExercise[]
+  participants WorkoutParticipant[]
+  template     WorkoutTemplate?     @relation(fields: [templateId], references: [id])
+
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model WorkoutParticipant {
+  id        String         @id @default(uuid())
+  sessionId String
+  userId    String
+  session   WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+model SessionExercise {
+  id                String         @id @default(uuid())
+  sessionId         String
+  exerciseId        String
+  position          Int
+  notes             String?
+  targetSets        Int?
+  targetReps        Int?
+  restSeconds       Int?
+  executionMode     ExecutionMode  @default(BILATERAL)
+  targetWeightKg    Float?
+  leftWeightKg      Float?
+  rightWeightKg     Float?
+  targetDurationSec Int?
+  cardioEntry       CardioEntry?
+  sets              ExerciseSet[]
+  exercise          Exercise       @relation(fields: [exerciseId], references: [id])
+  session           WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, position])
+  @@index([exerciseId])
+}
+
+model CardioEntry {
+  id                String          @id @default(uuid())
+  sessionExerciseId String          @unique
+  durationSec       Int?
+  distanceKm        Float?
+  calories          Int?
+  speedKmh          Float?
+  inclinePercent    Float?
+  avgHeartRate      Int?
+  maxHeartRate      Int?
+  watts             Int?
+  rpm               Int?
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+}
+
+model ExerciseSet {
+  id                String          @id @default(uuid())
+  sessionExerciseId String
+  setNumber         Int
+  reps              Int?
+  weightKg          Float?
+  durationSec       Int?
+  distanceMeters    Int?
+  completed         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  side              ExerciseSide    @default(BOTH)
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionExerciseId, setNumber, side])
+}
+
+model BodySnapshot {
+  id         String   @id @default(uuid())
+  userId     String
+  measuredAt DateTime
+  weightKg   Float?
+  neckCm     Float?
+  chestCm    Float?
+  waistCm    Float?
+  hipsCm     Float?
+  armCm      Float?
+  thighCm    Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, measuredAt])
+  @@index([userId])
+  @@index([measuredAt])
+}
+
+model BodyGoal {
+  id          String       @id @default(uuid())
+  userId      String
+  metric      BodyMetric
+  level       Int
+  targetValue Float
+  deadline    DateTime?
+  notes       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  goalType    BodyGoalType @default(LOSS)
+  tolerance   Float?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, metric, level])
+  @@index([userId])
+  @@index([metric])
+  @@index([deadline])
+}
+
 enum UserRole {
   SUPER_ADMIN
   USER
@@ -76,218 +270,8 @@ enum BodyMetric {
   THIGH_CM
 }
 
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(USER)
-  displayName  String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ownedTemplates WorkoutTemplate[] @relation("TemplateOwner")
-  workoutParticipations WorkoutParticipant[]
-  bodySnapshots BodySnapshot[]
-  bodyGoals BodyGoal[]
-}
-
-model Exercise {
-  id          String      @id @default(uuid())
-  name        String      @unique
-  muscleGroup MuscleGroup
-  type            String          @default("machine")
-  trackingType    ExerciseTrackingType @default(STRENGTH)
-  progressionType ProgressionType @default(WEIGHT)
-  muscles         String[]        @default([])
-  description String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  templateExercises TemplateExercise[]
-  sessionExercises  SessionExercise[]
-}
-
-model WorkoutTemplate {
-  id          String  @id @default(uuid())
-  name        String
-  description String?
-  ownerId     String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner     User @relation("TemplateOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  exercises TemplateExercise[]
-  sessions  WorkoutSession[]
-
-  @@index([ownerId])
-}
-
-model TemplateExercise {
-  id                String @id @default(uuid())
-  workoutTemplateId String
-  exerciseId        String
-  position          Int
-  targetSets        Int
-  targetReps        Int?
-  targetDurationSec Int?
-  restSeconds       Int?
-  executionMode     ExecutionMode @default(BILATERAL)
-  targetWeightKg    Float?
-  leftWeightKg      Float?
-  rightWeightKg     Float?
-  notes             String?
-
-  workoutTemplate WorkoutTemplate @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
-  exercise        Exercise        @relation(fields: [exerciseId], references: [id])
-
-  @@unique([workoutTemplateId, position])
-  @@index([exerciseId])
-}
-
-model WorkoutSession {
-  id          String        @id @default(uuid())
-  title       String
-  status      WorkoutStatus @default(PLANNED)
-  scheduledAt DateTime?
-  startedAt   DateTime?
-  completedAt DateTime?
-  notes       String?
-  templateId  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  template     WorkoutTemplate?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  participants WorkoutParticipant[]
-  exercises    SessionExercise[]
-
-  @@index([status])
-  @@index([scheduledAt])
-}
-
-model WorkoutParticipant {
-  id        String @id @default(uuid())
-  sessionId String
-  userId    String
-
-  session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([sessionId, userId])
-  @@index([userId])
-}
-
-model SessionExercise {
-  id                String @id @default(uuid())
-  sessionId         String
-  exerciseId        String
-  position          Int
-  targetSets        Int?
-  targetReps        Int?
-  targetDurationSec Int?
-  restSeconds       Int?
-  executionMode     ExecutionMode @default(BILATERAL)
-  targetWeightKg    Float?
-  leftWeightKg      Float?
-  rightWeightKg     Float?
-  notes             String?
-
-  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  exercise Exercise       @relation(fields: [exerciseId], references: [id])
-  sets        ExerciseSet[]
-  cardioEntry CardioEntry?
-
-  @@unique([sessionId, position])
-  @@index([exerciseId])
-}
-
-
-model CardioEntry {
-  id                String @id @default(uuid())
-  sessionExerciseId String @unique
-
-  durationSec       Int?
-  distanceKm        Float?
-  calories          Int?
-  speedKmh          Float?
-  inclinePercent    Float?
-  avgHeartRate      Int?
-  maxHeartRate      Int?
-  watts             Int?
-  rpm               Int?
-  notes             String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
-}
-
-model ExerciseSet {
-  id                String       @id @default(uuid())
-  sessionExerciseId String
-  setNumber         Int
-  side              ExerciseSide @default(BOTH)
-  reps              Int?
-  weightKg          Float?
-  durationSec       Int?
-  distanceMeters    Int?
-  completed         Boolean      @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
-
-  @@unique([sessionExerciseId, setNumber, side])
-}
-
-
-model BodySnapshot {
-  id      String @id @default(uuid())
-  userId  String
-
-  measuredAt DateTime
-  weightKg   Float?
-  neckCm     Float?
-  chestCm    Float?
-  waistCm    Float?
-  hipsCm     Float?
-  armCm      Float?
-  thighCm    Float?
-  notes      String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, measuredAt])
-  @@index([userId])
-  @@index([measuredAt])
-}
-
-
-model BodyGoal {
-  id          String     @id @default(uuid())
-  userId      String
-  metric      BodyMetric
-  level       Int
-  targetValue Float
-  deadline    DateTime?
-  notes       String?
-  isActive    Boolean    @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, metric, level])
-  @@index([userId])
-  @@index([metric])
-  @@index([deadline])
+enum BodyGoalType {
+  LOSS
+  MAINTAIN
+  GAIN
 }

@@ -2285,3 +2285,74 @@ button.danger:hover,
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== PHYSICAL RATIO + GOAL TYPE ===== */
+.ratio-card {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--ratio-color, #e2e8f0) 55%, #e2e8f0);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ratio-color, #e2e8f0) 20%, transparent) var(--ratio-progress, 0%), #f8fafc var(--ratio-progress, 0%));
+}
+
+.ratio-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 5px;
+  background: linear-gradient(90deg, #ef4444 0%, #facc15 40%, #16a34a 100%);
+}
+
+.ratio-overview-card .section-title {
+  align-items: flex-start;
+}
+
+.ratio-overview-card strong {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--ratio-color, #e2e8f0);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.24);
+}
+
+.ratio-gauge {
+  position: relative;
+  height: 18px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ef4444 0%, #facc15 40%, #16a34a 100%);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.ratio-gauge span {
+  position: absolute;
+  top: 50%;
+  left: var(--ratio-progress, 0%);
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--ratio-color, #e2e8f0);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);
+  transform: translate(-50%, -50%);
+}
+
+.ratio-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.goal-level > div:nth-child(2) {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}

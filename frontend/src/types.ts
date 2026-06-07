@@ -232,12 +232,16 @@ export type BodyMetric =
   | "ARM_CM"
   | "THIGH_CM";
 
+export type BodyGoalType = "DECREASE" | "MAINTAIN" | "INCREASE";
+
 export type BodyGoal = {
   id: string;
   userId: string;
   metric: BodyMetric;
   level: number;
+  goalType: BodyGoalType;
   targetValue: number;
+  tolerance?: number | null;
   deadline?: string | null;
   notes?: string | null;
   isActive: boolean;
@@ -248,7 +252,9 @@ export type BodyGoal = {
 export type BodyGoalPayload = {
   metric: BodyMetric;
   level: number;
+  goalType: BodyGoalType;
   targetValue: number;
+  tolerance?: number | null;
   deadline?: string;
   notes?: string;
   isActive?: boolean;
