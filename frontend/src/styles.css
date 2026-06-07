@@ -2005,3 +2005,283 @@ button.danger:hover,
     flex-direction: column;
   }
 }
+
+.metric-card {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.metric-card.active {
+  border-color: #2f5fe8;
+  background: #eef4ff;
+}
+
+.metric-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+}
+
+.metric-tabs button,
+.quick-goal-actions button,
+.goal-actions button {
+  border: 1px solid #dbe7ff;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #1e293b;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.metric-tabs button.active {
+  background: #2f5fe8;
+  color: #fff;
+  border-color: #2f5fe8;
+}
+
+.body-chart-wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.body-chart {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.body-chart line {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+}
+
+.body-chart path {
+  fill: none;
+  stroke: #2f5fe8;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.body-chart circle {
+  fill: #2f5fe8;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.body-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.body-chart-footer b {
+  color: #0f172a;
+}
+
+.quick-goal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.goal-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.goal-form .wide {
+  grid-column: 1 / -1;
+}
+
+.goal-metric-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.goal-metric-card {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.goal-metric-card h4 {
+  margin: 0 0 10px;
+}
+
+.goal-levels {
+  display: grid;
+  gap: 10px;
+}
+
+.goal-level {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.goal-level.reached {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.goal-level div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.goal-level small {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.goal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .goal-form {
+    grid-template-columns: 1fr;
+  }
+
+  .body-chart-footer {
+    flex-direction: column;
+  }
+}
+
+/* ===== PHYSICAL TRACKING MOBILE FIXES ===== */
+.physical-dashboard,
+.physical-dashboard .card,
+.physical-dashboard .section-title,
+.physical-dashboard form,
+.physical-dashboard label,
+.physical-dashboard input,
+.physical-dashboard select,
+.physical-dashboard textarea,
+.metric-card,
+.goal-metric-card,
+.goal-level,
+.body-chart-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.physical-dashboard {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.physical-dashboard .card {
+  overflow: hidden;
+}
+
+.physical-dashboard p,
+.physical-dashboard h3,
+.physical-dashboard h4,
+.metric-card span,
+.metric-card b,
+.goal-level small,
+.goal-level span {
+  overflow-wrap: anywhere;
+}
+
+.physical-stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+}
+
+.physical-stats-grid div,
+.physical-stats-grid button {
+  min-width: 0;
+}
+
+.metric-card {
+  display: grid;
+  gap: 4px;
+}
+
+.metric-tabs,
+.quick-goal-actions,
+.goal-actions {
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.metric-tabs button,
+.quick-goal-actions button,
+.goal-actions button {
+  max-width: 100%;
+}
+
+.body-chart {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.warning {
+  padding: 12px;
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.goal-form[aria-disabled="true"] {
+  opacity: 0.72;
+}
+
+@media (max-width: 720px) {
+  .physical-dashboard {
+    gap: 12px;
+  }
+
+  .physical-dashboard .card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .physical-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .metric-card {
+    padding: 12px;
+  }
+
+  .metric-card b,
+  .physical-stats-grid b {
+    font-size: 18px;
+  }
+
+  .quick-goal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

@@ -16,6 +16,8 @@ import type {
   CardioEntry,
   BodySnapshot,
   BodySnapshotPayload,
+  BodyGoal,
+  BodyGoalPayload,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -47,12 +49,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: unknown = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text };
+    }
+  }
+
   if (!res.ok) {
-    throw new ApiError(
-      res.status,
-      typeof data?.error === "string" ? data.error : "Erreur API",
-    );
+    const errorMessage =
+      typeof data === "object" &&
+      data !== null &&
+      "error" in data &&
+      typeof (data as { error?: unknown }).error === "string"
+        ? (data as { error: string }).error
+        : "Erreur API";
+
+    throw new ApiError(res.status, errorMessage);
   }
 
   return data as T;
@@ -241,5 +257,15 @@ export const api = {
     request<BodySnapshot>("/body/snapshots", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  bodyGoals: () => request<BodyGoal[]>("/body/goals"),
+  saveBodyGoal: (body: BodyGoalPayload) =>
+    request<BodyGoal>("/body/goals", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteBodyGoal: (goalId: string) =>
+    request(`/body/goals/${goalId}`, {
+      method: "DELETE",
     }),
 };

@@ -66,6 +66,16 @@ enum ProgressionType {
   DURATION
 }
 
+enum BodyMetric {
+  WEIGHT_KG
+  NECK_CM
+  CHEST_CM
+  WAIST_CM
+  HIPS_CM
+  ARM_CM
+  THIGH_CM
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -79,6 +89,7 @@ model User {
   ownedTemplates WorkoutTemplate[] @relation("TemplateOwner")
   workoutParticipations WorkoutParticipant[]
   bodySnapshots BodySnapshot[]
+  bodyGoals BodyGoal[]
 }
 
 model Exercise {
@@ -257,4 +268,26 @@ model BodySnapshot {
   @@unique([userId, measuredAt])
   @@index([userId])
   @@index([measuredAt])
+}
+
+
+model BodyGoal {
+  id          String     @id @default(uuid())
+  userId      String
+  metric      BodyMetric
+  level       Int
+  targetValue Float
+  deadline    DateTime?
+  notes       String?
+  isActive    Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, metric, level])
+  @@index([userId])
+  @@index([metric])
+  @@index([deadline])
 }

@@ -222,6 +222,38 @@ export type BodySnapshotPayload = {
   notes?: string;
 };
 
+
+export type BodyMetric =
+  | "WEIGHT_KG"
+  | "NECK_CM"
+  | "CHEST_CM"
+  | "WAIST_CM"
+  | "HIPS_CM"
+  | "ARM_CM"
+  | "THIGH_CM";
+
+export type BodyGoal = {
+  id: string;
+  userId: string;
+  metric: BodyMetric;
+  level: number;
+  targetValue: number;
+  deadline?: string | null;
+  notes?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type BodyGoalPayload = {
+  metric: BodyMetric;
+  level: number;
+  targetValue: number;
+  deadline?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
 export type LastExercisePerformance = {
   exerciseId: string;
   exerciseName: string;
