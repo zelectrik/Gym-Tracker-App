@@ -21,6 +21,7 @@ type FieldKey =
 type ComputedKey = "chestWaistRatio";
 type MetricKey = FieldKey | ComputedKey;
 type GoalStatus = "good" | "warning" | "bad" | "unknown";
+export type PhysicalTab = "dashboard" | "evolutions" | "goals" | "history";
 
 type Field = {
   key: MetricKey;
@@ -131,12 +132,6 @@ const fields = [
     hint: "1 = rouge, 1.12 = jaune, 1.30 = vert",
   },
 ] as const satisfies readonly Field[];
-
-const defaultGoalLevels: Partial<Record<BodyMetric, number[]>> = {
-  WEIGHT_KG: [100, 95, 90, 85],
-  WAIST_CM: [110, 105, 100, 95],
-  CHEST_WAIST_RATIO: [1.05, 1.12, 1.2, 1.3],
-};
 
 const goalTypeLabels: Record<BodyGoalType, string> = {
   LOSS: "Perte / baisse",
@@ -478,7 +473,13 @@ function MiniLineChart({
   );
 }
 
-export function PhysicalTrackingDashboard() {
+export function PhysicalTrackingDashboard({
+  activePhysicalTab,
+  setActivePhysicalTab,
+}: {
+  activePhysicalTab: PhysicalTab;
+  setActivePhysicalTab: (tab: PhysicalTab) => void;
+}) {
   const [snapshots, setSnapshots] = useState<BodySnapshot[]>([]);
   const [goals, setGoals] = useState<BodyGoal[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm());
@@ -494,6 +495,7 @@ export function PhysicalTrackingDashboard() {
   const [goalError, setGoalError] = useState("");
   const [goalsAvailable, setGoalsAvailable] = useState(true);
   const [error, setError] = useState("");
+  const [showMeasureForm, setShowMeasureForm] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -540,6 +542,10 @@ export function PhysicalTrackingDashboard() {
       ),
     [snapshots],
   );
+  const sortedDescending = useMemo(
+    () => [...sortedAscending].reverse(),
+    [sortedAscending],
+  );
   const chartPoints = useMemo(
     () =>
       sortedAscending
@@ -564,6 +570,19 @@ export function PhysicalTrackingDashboard() {
     );
   }, [goals]);
 
+  const keyFields = useMemo(
+    () =>
+      [
+        "WEIGHT_KG",
+        "WAIST_CM",
+        "CHEST_WAIST_RATIO",
+        "CHEST_CM",
+        "ARM_CM",
+        "THIGH_CM",
+      ].map((metric) => getFieldByMetric(metric as BodyMetric)),
+    [],
+  );
+
   function updateField(key: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -586,6 +605,30 @@ export function PhysicalTrackingDashboard() {
     }));
   }
 
+  function getBestGoalForField(field: Field) {
+    const current = getSnapshotMetricValue(latest, field);
+    const fieldGoals = goalsByMetric[field.metric] ?? [];
+    const maintain = fieldGoals.find((goal) => isMaintainType(goal.goalType));
+    if (maintain) return maintain;
+
+    const progressionGoals = fieldGoals.filter(
+      (goal) => !isMaintainType(goal.goalType),
+    );
+    if (typeof current !== "number") return progressionGoals[0];
+
+    return (
+      progressionGoals.find(
+        (goal) => getGoalStatus(current, goal) !== "good",
+      ) ?? progressionGoals[progressionGoals.length - 1]
+    );
+  }
+
+  function getMainDelta(field: Field) {
+    const current = getSnapshotMetricValue(latest, field);
+    const previousValue = getSnapshotMetricValue(previous, field);
+    return getDelta(current, previousValue);
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -596,6 +639,7 @@ export function PhysicalTrackingDashboard() {
       await api.saveBodySnapshot(buildPayload(form));
       setMessage("État physique enregistré.");
       setForm(emptyForm());
+      setShowMeasureForm(false);
       await refresh();
     } catch (err) {
       setError(
@@ -647,435 +691,496 @@ export function PhysicalTrackingDashboard() {
     }
   }
 
-  async function createDefaultGoals(metric: BodyMetric) {
-    const levels = defaultGoalLevels[metric] ?? [];
-    if (levels.length === 0) return;
-    setSavingGoal(true);
-    setGoalError("");
+  function editSnapshot(snapshot: BodySnapshot) {
+    setForm(snapshotToForm(snapshot));
+    setShowMeasureForm(true);
+    setMessage("");
     setError("");
+  }
 
-    try {
-      await Promise.all(
-        levels.map((targetValue, index) =>
-          api.saveBodyGoal({
-            metric,
-            goalType:
-              metric === "WEIGHT_KG" || metric === "WAIST_CM" ? "LOSS" : "GAIN",
-            level: index + 1,
-            targetValue,
-          }),
-        ),
-      );
-      setGoalMessage("Niveaux rapides créés.");
-      setSelectedMetric(metric);
-      await refresh();
-    } catch (err) {
-      setGoalError(
-        err instanceof Error ? err.message : "Création des niveaux impossible",
-      );
-      setGoalsAvailable(false);
-    } finally {
-      setSavingGoal(false);
-    }
+  function editGoal(goal: BodyGoal) {
+    setGoalForm(goalToForm(goal));
+    setActivePhysicalTab("goals");
+    setGoalMessage("");
+    setGoalError("");
   }
 
   const isMaintainForm = isMaintainType(goalForm.goalType);
+  const weightDelta = getDelta(latest?.weightKg, previous?.weightKg);
+  const heroSubtitle = latest
+    ? `Dernière mesure · ${formatDate(latest.measuredAt)}`
+    : "Ajoute ta première mesure pour débloquer le suivi.";
 
   return (
-    <section className="physical-dashboard">
-      <section className="card physical-hero-card">
-        <div>
-          <span className="pill">Suivi physique</span>
-          <h3>État courant du corps</h3>
-          <p>
-            Ajoute ton poids, tes mensurations, puis suis tes niveaux et tes
-            maintiens durables. Le ratio torse / ventre donne un indicateur
-            visuel rapide de transformation.
-          </p>
-        </div>
+    <section className="physical-dashboard physical-dashboard-v2 physical-dashboard-tabs-v3">
+      {activePhysicalTab === "dashboard" && (
+        <>
+          <section className="card physical-focus-card">
+            <div className="physical-focus-topline">
+              <span className="pill">Physique</span>
+              <span>{heroSubtitle}</span>
+            </div>
 
-        {latest && (
-          <div className="physical-latest-card">
-            <span>Dernier état</span>
-            <b>{formatDate(latest.measuredAt)}</b>
-            <p>{formatValue(latest.weightKg, "kg")}</p>
-          </div>
-        )}
-      </section>
+            <div className="physical-focus-main">
+              <div>
+                <span>Poids actuel</span>
+                <strong>{formatValue(latest?.weightKg, "kg")}</strong>
+                {weightDelta && (
+                  <small>{weightDelta} depuis la dernière mesure</small>
+                )}
+              </div>
+              <div
+                className="physical-ratio-summary"
+                style={getRatioStyle(latestRatio)}
+              >
+                <span>Ratio torse / ventre</span>
+                <strong>{formatValue(latestRatio)}</strong>
+                <small>1.00 rouge · 1.12 jaune · 1.30 vert</small>
+              </div>
+            </div>
 
-      <section className="card">
-        <div className="section-title">
-          <div>
-            <h3>Ajouter un état</h3>
-            <p>
-              Tu peux aussi sélectionner une ancienne date pour saisir ton
-              historique.
-            </p>
-          </div>
-        </div>
+            <button
+              type="button"
+              className="primary large-action"
+              onClick={() => setShowMeasureForm((current) => !current)}
+            >
+              {showMeasureForm ? "Fermer la saisie" : "+ Ajouter une mesure"}
+            </button>
+          </section>
 
-        <form className="body-form" onSubmit={submit}>
-          <label className="wide">
-            Date
-            <input
-              type="date"
-              value={form.measuredAt}
-              onChange={(e) => updateField("measuredAt", e.target.value)}
-              required
-            />
-          </label>
+          {showMeasureForm && (
+            <section className="card compact-physical-card">
+              <div className="section-title compact-section-title">
+                <div>
+                  <h3>
+                    {form.measuredAt === todayLocalDate()
+                      ? "Nouvelle mesure"
+                      : "Modifier une mesure"}
+                  </h3>
+                  <p>Date ancienne possible pour compléter ton historique.</p>
+                </div>
+              </div>
 
-          {inputFields.map((field) => (
-            <label key={field.key}>
-              {field.label} ({field.unit})
-              <input
-                type="number"
-                min="0"
-                step={field.step}
-                inputMode="decimal"
-                value={form[field.key]}
-                onChange={(e) => updateField(field.key, e.target.value)}
-                placeholder={field.unit}
-              />
-            </label>
-          ))}
+              <form className="body-form compact-body-form" onSubmit={submit}>
+                <label className="wide">
+                  Date
+                  <input
+                    type="date"
+                    value={form.measuredAt}
+                    onChange={(e) => updateField("measuredAt", e.target.value)}
+                    required
+                  />
+                </label>
 
-          <label className="wide">
-            Notes
-            <textarea
-              value={form.notes}
-              onChange={(e) => updateField("notes", e.target.value)}
-              placeholder="Optionnel : photos prises, conditions, remarques..."
-            />
-          </label>
+                {inputFields.map((field) => (
+                  <label key={field.key}>
+                    {field.label} ({field.unit})
+                    <input
+                      type="number"
+                      min="0"
+                      step={field.step}
+                      inputMode="decimal"
+                      value={form[field.key]}
+                      onChange={(e) => updateField(field.key, e.target.value)}
+                      placeholder={field.unit}
+                    />
+                  </label>
+                ))}
 
-          {message && <p className="success wide">{message}</p>}
-          {error && <p className="error wide">{error}</p>}
+                <label className="wide">
+                  Notes
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => updateField("notes", e.target.value)}
+                    placeholder="Optionnel : photos prises, conditions, remarques..."
+                  />
+                </label>
 
-          <button className="primary large-action wide" disabled={saving}>
-            {saving ? "Enregistrement..." : "Enregistrer l'état"}
-          </button>
-        </form>
-      </section>
+                {message && <p className="success wide">{message}</p>}
+                {error && <p className="error wide">{error}</p>}
 
-      {latest && (
-        <section className="card">
-          <h3>Dernières mesures</h3>
-          <div className="ratio-panel" style={getRatioStyle(latestRatio)}>
+                <button className="primary large-action wide" disabled={saving}>
+                  {saving ? "Enregistrement..." : "Enregistrer l'état"}
+                </button>
+              </form>
+            </section>
+          )}
+
+          <section className="card compact-physical-card">
+            <div className="section-title compact-section-title">
+              <div>
+                <h3>Indicateurs clés</h3>
+                <p>
+                  Couleurs liées aux objectifs de maintien quand ils existent.
+                </p>
+              </div>
+            </div>
+
+            <div className="physical-kpi-grid">
+              {keyFields.map((field) => {
+                const current = getSnapshotMetricValue(latest, field);
+                const maintainGoal = getMaintainerForMetric(
+                  maintainGoals,
+                  field.metric,
+                );
+                const goal = getBestGoalForField(field);
+                const status = maintainGoal
+                  ? getGoalStatus(current, maintainGoal)
+                  : "unknown";
+                return (
+                  <button
+                    key={field.metric}
+                    type="button"
+                    className={getMetricCardClass(
+                      status,
+                      selectedMetric === field.metric,
+                    )}
+                    style={
+                      field.key === "chestWaistRatio"
+                        ? getRatioStyle(current ?? undefined)
+                        : undefined
+                    }
+                    onClick={() => {
+                      setSelectedMetric(field.metric);
+                      setActivePhysicalTab("evolutions");
+                    }}
+                  >
+                    <span>{field.label}</span>
+                    <b>{formatValue(current, field.unit)}</b>
+                    {latest && previous && <small>{getMainDelta(field)}</small>}
+                    {goal && (
+                      <em>{getGoalProgress(current, goal, field.unit)}</em>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
+
+      {activePhysicalTab === "evolutions" && (
+        <section className="card compact-physical-card">
+          <div className="section-title compact-section-title">
             <div>
-              <span>Ratio torse / ventre</span>
-              <b>{formatValue(latestRatio)}</b>
-            </div>
-            <div className="ratio-scale">
-              <span>1.00</span>
-              <span>1.12</span>
-              <span>1.30</span>
+              <span className="pill">Évolutions</span>
+              <h3>{selectedField.label}</h3>
+              <p>Choisis une donnée et suis sa tendance.</p>
             </div>
           </div>
-          <div className="physical-stats-grid">
+
+          <div className="metric-tabs compact-metric-tabs">
+            {fields.map((field) => (
+              <button
+                key={field.metric}
+                type="button"
+                className={selectedMetric === field.metric ? "active" : ""}
+                onClick={() => setSelectedMetric(field.metric)}
+              >
+                {field.shortLabel}
+              </button>
+            ))}
+          </div>
+
+          <MiniLineChart points={chartPoints} unit={selectedField.unit} />
+        </section>
+      )}
+
+      {activePhysicalTab === "goals" && (
+        <section className="card compact-physical-card">
+          <div className="section-title compact-section-title">
+            <div>
+              <span className="pill">Objectifs</span>
+              <h3>Niveaux & maintiens</h3>
+              <p>
+                Les pertes/progrès ont des niveaux. Les maintiens sont uniques
+                par mesure.
+              </p>
+            </div>
+          </div>
+
+          {!goalsAvailable && (
+            <p className="warning">
+              Objectifs indisponibles : applique la migration Prisma puis
+              relance le backend.
+              {goalError ? ` Détail : ${goalError}` : ""}
+            </p>
+          )}
+
+          <div className="goal-summary-list goals-tab-summary">
             {fields.map((field) => {
+              const metricGoals = goalsByMetric[field.metric] ?? [];
+              if (metricGoals.length === 0) return null;
               const current = getSnapshotMetricValue(latest, field);
-              const previousValue = getSnapshotMetricValue(previous, field);
-              const maintainGoal = getMaintainerForMetric(
-                maintainGoals,
-                field.metric,
-              );
-              const status = maintainGoal
-                ? getGoalStatus(current, maintainGoal)
-                : "unknown";
+              const mainGoal = getBestGoalForField(field);
+              if (!mainGoal) return null;
+              const status = getGoalStatus(current, mainGoal);
               return (
                 <button
-                  key={field.key}
+                  key={field.metric}
                   type="button"
-                  className={getMetricCardClass(
-                    status,
-                    selectedMetric === field.metric,
-                  )}
-                  style={
-                    field.key === "chestWaistRatio"
-                      ? getRatioStyle(current ?? undefined)
-                      : undefined
-                  }
+                  className={`goal-summary-item status-${status}`}
                   onClick={() => setSelectedMetric(field.metric)}
                 >
-                  <span>{field.label}</span>
-                  <b>{formatValue(current, field.unit)}</b>
-                  {previous && (
-                    <small>{getDelta(current, previousValue)}</small>
-                  )}
-                  {maintainGoal && (
-                    <em>
-                      {getGoalProgress(current, maintainGoal, field.unit)}
-                    </em>
-                  )}
+                  <span>{field.shortLabel}</span>
+                  <b>
+                    {isMaintainType(mainGoal.goalType)
+                      ? goalTypeLabels[mainGoal.goalType]
+                      : `Niveau ${mainGoal.level}`}
+                  </b>
+                  <small>
+                    {formatValue(mainGoal.targetValue, field.unit)} ·{" "}
+                    {getGoalProgress(current, mainGoal, field.unit)}
+                  </small>
                 </button>
               );
             })}
+            {goals.length === 0 && (
+              <p className="muted">Aucun objectif enregistré pour le moment.</p>
+            )}
+          </div>
+
+          <div className="goal-manager-panel always-open-goal-panel">
+            <form
+              className="goal-form"
+              onSubmit={submitGoal}
+              aria-disabled={!goalsAvailable}
+            >
+              <label>
+                Mesure
+                <select
+                  value={goalForm.metric}
+                  onChange={(e) =>
+                    updateGoalField("metric", e.target.value as BodyMetric)
+                  }
+                  disabled={!goalsAvailable}
+                >
+                  {fields.map((field) => (
+                    <option key={field.metric} value={field.metric}>
+                      {field.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Type
+                <select
+                  value={goalForm.goalType}
+                  onChange={(e) =>
+                    updateGoalField("goalType", e.target.value as BodyGoalType)
+                  }
+                  disabled={!goalsAvailable}
+                >
+                  {Object.entries(goalTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {!isMaintainForm && (
+                <label>
+                  Niveau
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={goalForm.level}
+                    onChange={(e) => updateGoalField("level", e.target.value)}
+                    required
+                    disabled={!goalsAvailable}
+                  />
+                </label>
+              )}
+
+              <label>
+                {isMaintainForm ? "Limite de maintien" : "Valeur cible"}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={goalForm.targetValue}
+                  onChange={(e) =>
+                    updateGoalField("targetValue", e.target.value)
+                  }
+                  placeholder={
+                    getFieldByMetric(goalForm.metric).unit || "ratio"
+                  }
+                  required
+                  disabled={!goalsAvailable}
+                />
+              </label>
+
+              {isMaintainForm && (
+                <label>
+                  Threshold / zone jaune
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={goalForm.tolerance}
+                    onChange={(e) =>
+                      updateGoalField("tolerance", e.target.value)
+                    }
+                    placeholder="Optionnel"
+                    disabled={!goalsAvailable}
+                  />
+                </label>
+              )}
+
+              {!isMaintainForm && (
+                <label>
+                  Deadline
+                  <input
+                    type="date"
+                    value={goalForm.deadline}
+                    onChange={(e) =>
+                      updateGoalField("deadline", e.target.value)
+                    }
+                    disabled={!goalsAvailable}
+                  />
+                </label>
+              )}
+
+              <label className="wide">
+                Notes
+                <input
+                  value={goalForm.notes}
+                  onChange={(e) => updateGoalField("notes", e.target.value)}
+                  placeholder="Optionnel"
+                  disabled={!goalsAvailable}
+                />
+              </label>
+
+              {goalMessage && <p className="success wide">{goalMessage}</p>}
+              {goalError && goalsAvailable && (
+                <p className="error wide">{goalError}</p>
+              )}
+
+              <button
+                className="primary wide"
+                disabled={savingGoal || !goalsAvailable}
+              >
+                {savingGoal
+                  ? "Enregistrement..."
+                  : isMaintainForm
+                    ? "Enregistrer le maintien"
+                    : "Enregistrer le niveau"}
+              </button>
+            </form>
+
+            <div className="goal-metric-list compact-goal-list">
+              {fields.map((field) => {
+                const metricGoals = goalsByMetric[field.metric] ?? [];
+                if (metricGoals.length === 0) return null;
+                const current = getSnapshotMetricValue(latest, field);
+
+                return (
+                  <article key={field.metric} className="goal-metric-card">
+                    <h4>{field.label}</h4>
+                    <div className="goal-levels">
+                      {metricGoals.map((goal) => {
+                        const status = getGoalStatus(current, goal);
+                        const maintain = isMaintainType(goal.goalType);
+                        return (
+                          <div
+                            key={goal.id}
+                            className={`goal-level status-${status}`}
+                          >
+                            <div>
+                              <b>
+                                {maintain
+                                  ? goalTypeLabels[goal.goalType]
+                                  : `Niveau ${goal.level}`}
+                              </b>
+                              <span>
+                                {formatValue(goal.targetValue, field.unit)}
+                              </span>
+                            </div>
+                            <small>
+                              {maintain
+                                ? "Maintien durable"
+                                : goal.deadline
+                                  ? `Deadline ${formatDate(goal.deadline)}`
+                                  : "Pas de deadline"}
+                              {goal.tolerance
+                                ? ` · threshold ${formatValue(goal.tolerance, field.unit)}`
+                                : ""}
+                              {" · "}
+                              {getGoalProgress(current, goal, field.unit)}
+                            </small>
+                            <div className="goal-actions">
+                              <button
+                                type="button"
+                                onClick={() => editGoal(goal)}
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeGoal(goal)}
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}
 
-      <section className="card">
-        <div className="section-title">
-          <div>
-            <h3>Graphique</h3>
-            <p>Un seul graphique à la fois pour rester lisible sur mobile.</p>
+      {activePhysicalTab === "history" && (
+        <section className="card compact-physical-card">
+          <div className="section-title compact-section-title">
+            <div>
+              <span className="pill">Historique</span>
+              <h3>Mesures</h3>
+              <p>
+                {snapshots.length} mesure{snapshots.length > 1 ? "s" : ""}{" "}
+                enregistrée{snapshots.length > 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="metric-tabs">
-          {fields.map((field) => (
-            <button
-              key={field.metric}
-              type="button"
-              className={selectedMetric === field.metric ? "active" : ""}
-              onClick={() => setSelectedMetric(field.metric)}
-            >
-              {field.shortLabel}
-            </button>
-          ))}
-        </div>
-
-        <MiniLineChart points={chartPoints} unit={selectedField.unit} />
-      </section>
-
-      <section className="card">
-        <div className="section-title">
-          <div>
-            <h3>Objectifs</h3>
-            <p>
-              Les pertes/progrès ont des niveaux. Les maintiens sont uniques par
-              mesure et sans deadline.
-            </p>
-          </div>
-        </div>
-
-        {!goalsAvailable && (
-          <p className="warning">
-            Objectifs indisponibles : applique la migration Prisma puis relance
-            le backend. Le suivi physique et les graphiques restent utilisables.
-            {goalError ? ` Détail : ${goalError}` : ""}
-          </p>
-        )}
-
-        <form
-          className="goal-form"
-          onSubmit={submitGoal}
-          aria-disabled={!goalsAvailable}
-        >
-          <label>
-            Mesure
-            <select
-              value={goalForm.metric}
-              onChange={(e) =>
-                updateGoalField("metric", e.target.value as BodyMetric)
-              }
-              disabled={!goalsAvailable}
-            >
-              {fields.map((field) => (
-                <option key={field.metric} value={field.metric}>
-                  {field.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Type
-            <select
-              value={goalForm.goalType}
-              onChange={(e) =>
-                updateGoalField("goalType", e.target.value as BodyGoalType)
-              }
-              disabled={!goalsAvailable}
-            >
-              {Object.entries(goalTypeLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {!isMaintainForm && (
-            <label>
-              Niveau
-              <input
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                value={goalForm.level}
-                onChange={(e) => updateGoalField("level", e.target.value)}
-                required
-                disabled={!goalsAvailable}
-              />
-            </label>
-          )}
-
-          <label>
-            {isMaintainForm ? "Limite de maintien" : "Valeur cible"}
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              value={goalForm.targetValue}
-              onChange={(e) => updateGoalField("targetValue", e.target.value)}
-              placeholder={getFieldByMetric(goalForm.metric).unit || "ratio"}
-              required
-              disabled={!goalsAvailable}
-            />
-          </label>
-
-          {isMaintainForm && (
-            <label>
-              Threshold / zone jaune
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={goalForm.tolerance}
-                onChange={(e) => updateGoalField("tolerance", e.target.value)}
-                placeholder="Optionnel"
-                disabled={!goalsAvailable}
-              />
-            </label>
-          )}
-
-          {!isMaintainForm && (
-            <label>
-              Deadline
-              <input
-                type="date"
-                value={goalForm.deadline}
-                onChange={(e) => updateGoalField("deadline", e.target.value)}
-                disabled={!goalsAvailable}
-              />
-            </label>
-          )}
-
-          <label className="wide">
-            Notes
-            <input
-              value={goalForm.notes}
-              onChange={(e) => updateGoalField("notes", e.target.value)}
-              placeholder="Optionnel"
-              disabled={!goalsAvailable}
-            />
-          </label>
-
-          {goalMessage && <p className="success wide">{goalMessage}</p>}
-          {goalError && goalsAvailable && (
-            <p className="error wide">{goalError}</p>
-          )}
-
-          <button
-            className="primary wide"
-            disabled={savingGoal || !goalsAvailable}
-          >
-            {savingGoal
-              ? "Enregistrement..."
-              : isMaintainForm
-                ? "Enregistrer le maintien"
-                : "Enregistrer le niveau"}
-          </button>
-        </form>
-
-        <div className="goal-metric-list">
-          {fields.map((field) => {
-            const metricGoals = goalsByMetric[field.metric] ?? [];
-            if (metricGoals.length === 0) return null;
-            const current = getSnapshotMetricValue(latest, field);
-
-            return (
-              <article key={field.metric} className="goal-metric-card">
-                <h4>{field.label}</h4>
-                <div className="goal-levels">
-                  {metricGoals.map((goal) => {
-                    const status = getGoalStatus(current, goal);
-                    const maintain = isMaintainType(goal.goalType);
-                    return (
-                      <div
-                        key={goal.id}
-                        className={`goal-level status-${status}`}
-                      >
-                        <div>
-                          <b>
-                            {maintain
-                              ? goalTypeLabels[goal.goalType]
-                              : `Niveau ${goal.level}`}
-                          </b>
-                          <span>
-                            {formatValue(goal.targetValue, field.unit)}
-                          </span>
-                        </div>
-                        <small>
-                          {maintain
-                            ? "Maintien durable"
-                            : goal.deadline
-                              ? `Deadline ${formatDate(goal.deadline)}`
-                              : "Pas de deadline"}
-                          {goal.tolerance
-                            ? ` · threshold ${formatValue(goal.tolerance, field.unit)}`
-                            : ""}
-                          {" · "}
-                          {getGoalProgress(current, goal, field.unit)}
-                        </small>
-                        <div className="goal-actions">
-                          <button
-                            type="button"
-                            onClick={() => setGoalForm(goalToForm(goal))}
-                          >
-                            Modifier
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeGoal(goal)}
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Historique physique</h3>
-        {loading ? (
-          <p>Chargement...</p>
-        ) : sortedAscending.length === 0 ? (
-          <p>Aucun état physique enregistré pour le moment.</p>
-        ) : (
-          <div className="body-history-list">
-            {sortedAscending.map((snapshot) => (
-              <article key={snapshot.id} className="body-history-item">
-                <div>
-                  <b>{formatDate(snapshot.measuredAt)}</b>
-                  <span>
-                    {formatValue(snapshot.weightKg, "kg")} · ventre{" "}
-                    {formatValue(snapshot.waistCm, "cm")} · ratio{" "}
-                    {formatValue(getRatio(snapshot))}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setForm(snapshotToForm(snapshot))}
+          {loading ? (
+            <p>Chargement...</p>
+          ) : sortedDescending.length === 0 ? (
+            <p>Aucun état physique enregistré pour le moment.</p>
+          ) : (
+            <div className="body-history-list compact-history-list full-history-list">
+              {sortedDescending.map((snapshot) => (
+                <article
+                  key={snapshot.id}
+                  className="body-history-item compact-history-item"
                 >
-                  Modifier
-                </button>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+                  <div>
+                    <b>{formatDate(snapshot.measuredAt)}</b>
+                    <span>
+                      {formatValue(snapshot.weightKg, "kg")} · ventre{" "}
+                      {formatValue(snapshot.waistCm, "cm")} · ratio{" "}
+                      {formatValue(getRatio(snapshot))}
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => editSnapshot(snapshot)}>
+                    Modifier
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </section>
   );
 }

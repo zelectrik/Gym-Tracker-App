@@ -12,7 +12,7 @@ import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
 import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 import { StatsDashboard, WorkoutSessionDetail } from "./StatsDashboard";
-import { PhysicalTrackingDashboard } from "./PhysicalTrackingDashboard";
+import { PhysicalTrackingDashboard, type PhysicalTab } from "./PhysicalTrackingDashboard";
 
 type DashboardTab = "sessions" | "history" | "exercises" | "programs" | "physical";
 type DashboardDomain = "gym" | "physical";
@@ -114,6 +114,7 @@ export function UserDashboard({ user }: { user: User }) {
   const [launchingTemplateId, setLaunchingTemplateId] = useState<string | null>(null);
   const [activeDomain, setActiveDomain] = useState<DashboardDomain>("gym");
   const [activeTab, setActiveTab] = useState<DashboardTab>("sessions");
+  const [activePhysicalTab, setActivePhysicalTab] = useState<PhysicalTab>("dashboard");
   const [selectedHistorySession, setSelectedHistorySession] = useState<WorkoutSession | null>(null);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
@@ -484,12 +485,14 @@ export function UserDashboard({ user }: { user: User }) {
         </>
       )}
 
-      {activeDomain === "physical" && <PhysicalTrackingDashboard />}
+      {activeDomain === "physical" && (
+        <PhysicalTrackingDashboard
+          activePhysicalTab={activePhysicalTab}
+          setActivePhysicalTab={setActivePhysicalTab}
+        />
+      )}
 
-      <nav
-        className={`dashboard-tabs card ${activeDomain === "physical" ? "physical-footer-tabs" : "gym-footer-tabs"}`}
-        aria-label="Navigation principale"
-      >
+      <nav className="dashboard-tabs card gym-footer-tabs" aria-label="Navigation principale">
         {activeDomain === "gym" ? (
           <>
             <TabButton active={activeTab === "sessions"} onClick={() => openGymTab("sessions")}>
@@ -506,9 +509,20 @@ export function UserDashboard({ user }: { user: User }) {
             </TabButton>
           </>
         ) : (
-          <TabButton active={activeTab === "physical"} onClick={openPhysical}>
-            Physique
-          </TabButton>
+          <>
+            <TabButton active={activePhysicalTab === "dashboard"} onClick={() => setActivePhysicalTab("dashboard")}>
+              Dashboard
+            </TabButton>
+            <TabButton active={activePhysicalTab === "evolutions"} onClick={() => setActivePhysicalTab("evolutions")}>
+              Évolutions
+            </TabButton>
+            <TabButton active={activePhysicalTab === "goals"} onClick={() => setActivePhysicalTab("goals")}>
+              Objectifs
+            </TabButton>
+            <TabButton active={activePhysicalTab === "history"} onClick={() => setActivePhysicalTab("history")}>
+              Historique
+            </TabButton>
+          </>
         )}
       </nav>
     </main>
