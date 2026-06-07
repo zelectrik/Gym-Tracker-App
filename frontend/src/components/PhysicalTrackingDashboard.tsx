@@ -54,18 +54,82 @@ type ChartPoint = {
 };
 
 const inputFields = [
-  { key: "weightKg", metric: "WEIGHT_KG", label: "Poids", shortLabel: "Poids", unit: "kg", step: "0.1", input: true },
-  { key: "neckCm", metric: "NECK_CM", label: "Cou", shortLabel: "Cou", unit: "cm", step: "0.1", input: true },
-  { key: "chestCm", metric: "CHEST_CM", label: "Torse", shortLabel: "Torse", unit: "cm", step: "0.1", input: true },
-  { key: "waistCm", metric: "WAIST_CM", label: "Ventre", shortLabel: "Ventre", unit: "cm", step: "0.1", input: true },
-  { key: "hipsCm", metric: "HIPS_CM", label: "Fesses", shortLabel: "Fesses", unit: "cm", step: "0.1", input: true },
-  { key: "armCm", metric: "ARM_CM", label: "Bras", shortLabel: "Bras", unit: "cm", step: "0.1", input: true },
-  { key: "thighCm", metric: "THIGH_CM", label: "Cuisses", shortLabel: "Cuisses", unit: "cm", step: "0.1", input: true },
+  {
+    key: "weightKg",
+    metric: "WEIGHT_KG",
+    label: "Poids",
+    shortLabel: "Poids",
+    unit: "kg",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "neckCm",
+    metric: "NECK_CM",
+    label: "Cou",
+    shortLabel: "Cou",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "chestCm",
+    metric: "CHEST_CM",
+    label: "Torse",
+    shortLabel: "Torse",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "waistCm",
+    metric: "WAIST_CM",
+    label: "Ventre",
+    shortLabel: "Ventre",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "hipsCm",
+    metric: "HIPS_CM",
+    label: "Fesses",
+    shortLabel: "Fesses",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "armCm",
+    metric: "ARM_CM",
+    label: "Bras",
+    shortLabel: "Bras",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
+  {
+    key: "thighCm",
+    metric: "THIGH_CM",
+    label: "Cuisses",
+    shortLabel: "Cuisses",
+    unit: "cm",
+    step: "0.1",
+    input: true,
+  },
 ] as const satisfies readonly Field[];
 
 const fields = [
   ...inputFields,
-  { key: "chestWaistRatio", metric: "CHEST_WAIST_RATIO", label: "Ratio torse / ventre", shortLabel: "Ratio", unit: "", step: "0.01", hint: "1 = rouge, 1.12 = jaune, 1.30 = vert" },
+  {
+    key: "chestWaistRatio",
+    metric: "CHEST_WAIST_RATIO",
+    label: "Ratio torse / ventre",
+    shortLabel: "Ratio",
+    unit: "",
+    step: "0.01",
+    hint: "1 = rouge, 1.12 = jaune, 1.30 = vert",
+  },
 ] as const satisfies readonly Field[];
 
 const defaultGoalLevels: Partial<Record<BodyMetric, number[]>> = {
@@ -187,7 +251,10 @@ function getRatio(snapshot?: BodySnapshot) {
   return snapshot.chestCm / snapshot.waistCm;
 }
 
-function getSnapshotMetricValue(snapshot: BodySnapshot | undefined, field: Field) {
+function getSnapshotMetricValue(
+  snapshot: BodySnapshot | undefined,
+  field: Field,
+) {
   if (!snapshot) return undefined;
   if (field.key === "chestWaistRatio") return getRatio(snapshot);
   return snapshot[field.key];
@@ -245,7 +312,10 @@ function getFieldByMetric(metric: BodyMetric) {
   return fields.find((field) => field.metric === metric) ?? fields[0];
 }
 
-function getGoalStatus(current: number | null | undefined, goal: BodyGoal): GoalStatus {
+function getGoalStatus(
+  current: number | null | undefined,
+  goal: BodyGoal,
+): GoalStatus {
   if (current === null || current === undefined) return "unknown";
   const tolerance = goal.tolerance ?? 0;
 
@@ -256,18 +326,24 @@ function getGoalStatus(current: number | null | undefined, goal: BodyGoal): Goal
       return current >= goal.targetValue ? "good" : "bad";
     case "MAINTAIN_ABOVE":
       if (current >= goal.targetValue) return "good";
-      if (tolerance > 0 && current >= goal.targetValue - tolerance) return "warning";
+      if (tolerance > 0 && current >= goal.targetValue - tolerance)
+        return "warning";
       return "bad";
     case "MAINTAIN_BELOW":
       if (current <= goal.targetValue) return "good";
-      if (tolerance > 0 && current <= goal.targetValue + tolerance) return "warning";
+      if (tolerance > 0 && current <= goal.targetValue + tolerance)
+        return "warning";
       return "bad";
     default:
       return "unknown";
   }
 }
 
-function getGoalProgress(current: number | null | undefined, goal: BodyGoal, unit: string) {
+function getGoalProgress(
+  current: number | null | undefined,
+  goal: BodyGoal,
+  unit: string,
+) {
   if (current === null || current === undefined) return "Pas encore de mesure";
   const diff = Math.abs(Math.round((current - goal.targetValue) * 100) / 100);
   const status = getGoalStatus(current, goal);
@@ -298,7 +374,10 @@ function getRatioScore(ratio?: number) {
     return Math.max(0, Math.min(50, ((ratio - min) / (yellow - min)) * 50));
   }
 
-  return Math.max(50, Math.min(100, 50 + ((ratio - yellow) / (max - yellow)) * 50));
+  return Math.max(
+    50,
+    Math.min(100, 50 + ((ratio - yellow) / (max - yellow)) * 50),
+  );
 }
 
 function getRatioStyle(ratio?: number) {
@@ -313,17 +392,30 @@ function getRatioStyle(ratio?: number) {
 
 function getMaintainerForMetric(goals: BodyGoal[], metric: BodyMetric) {
   return goals.find(
-    (goal) => goal.metric === metric && isMaintainType(goal.goalType) && goal.isActive,
+    (goal) =>
+      goal.metric === metric && isMaintainType(goal.goalType) && goal.isActive,
   );
 }
 
 function getMetricCardClass(status: GoalStatus, active: boolean) {
-  return ["metric-card", active ? "active" : "", `status-${status}`].filter(Boolean).join(" ");
+  return ["metric-card", active ? "active" : "", `status-${status}`]
+    .filter(Boolean)
+    .join(" ");
 }
 
-function MiniLineChart({ points, unit }: { points: ChartPoint[]; unit: string }) {
+function MiniLineChart({
+  points,
+  unit,
+}: {
+  points: ChartPoint[];
+  unit: string;
+}) {
   if (points.length < 2) {
-    return <p className="muted">Ajoute au moins 2 mesures pour afficher une courbe.</p>;
+    return (
+      <p className="muted">
+        Ajoute au moins 2 mesures pour afficher une courbe.
+      </p>
+    );
   }
 
   const width = 320;
@@ -335,29 +427,51 @@ function MiniLineChart({ points, unit }: { points: ChartPoint[]; unit: string })
   const range = Math.max(max - min, 1);
 
   const coordinates = points.map((point, index) => {
-    const x = padding + (index / Math.max(points.length - 1, 1)) * (width - padding * 2);
-    const y = height - padding - ((point.value - min) / range) * (height - padding * 2);
+    const x =
+      padding +
+      (index / Math.max(points.length - 1, 1)) * (width - padding * 2);
+    const y =
+      height - padding - ((point.value - min) / range) * (height - padding * 2);
     return { ...point, x, y };
   });
-  const path = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const path = coordinates
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
   const first = points[0];
   const last = points[points.length - 1];
 
   return (
     <div className="body-chart-wrap">
-      <svg className="body-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Graphique d'évolution physique">
+      <svg
+        className="body-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Graphique d'évolution physique"
+      >
         <line x1={padding} y1={padding} x2={padding} y2={height - padding} />
-        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} />
+        <line
+          x1={padding}
+          y1={height - padding}
+          x2={width - padding}
+          y2={height - padding}
+        />
         <path d={path} />
         {coordinates.map((point) => (
-          <circle key={`${point.label}-${point.value}`} cx={point.x} cy={point.y} r="4">
+          <circle
+            key={`${point.label}-${point.value}`}
+            cx={point.x}
+            cy={point.y}
+            r="4"
+          >
             <title>{`${point.label} : ${formatValue(point.value, unit)}`}</title>
           </circle>
         ))}
       </svg>
       <div className="body-chart-footer">
         <span>{first.label}</span>
-        <b>{formatValue(first.value, unit)} → {formatValue(last.value, unit)}</b>
+        <b>
+          {formatValue(first.value, unit)} → {formatValue(last.value, unit)}
+        </b>
         <span>{last.label}</span>
       </div>
     </div>
@@ -368,7 +482,9 @@ export function PhysicalTrackingDashboard() {
   const [snapshots, setSnapshots] = useState<BodySnapshot[]>([]);
   const [goals, setGoals] = useState<BodyGoal[]>([]);
   const [form, setForm] = useState<FormState>(() => emptyForm());
-  const [goalForm, setGoalForm] = useState<GoalFormState>(() => emptyGoalForm());
+  const [goalForm, setGoalForm] = useState<GoalFormState>(() =>
+    emptyGoalForm(),
+  );
   const [selectedMetric, setSelectedMetric] = useState<BodyMetric>("WEIGHT_KG");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -393,7 +509,11 @@ export function PhysicalTrackingDashboard() {
       } catch (err) {
         setGoals([]);
         setGoalsAvailable(false);
-        setGoalError(err instanceof Error ? err.message : "Objectifs indisponibles pour le moment.");
+        setGoalError(
+          err instanceof Error
+            ? err.message
+            : "Objectifs indisponibles pour le moment.",
+        );
       }
     } finally {
       setLoading(false);
@@ -413,7 +533,11 @@ export function PhysicalTrackingDashboard() {
     [goals],
   );
   const sortedAscending = useMemo(
-    () => [...snapshots].sort((a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime()),
+    () =>
+      [...snapshots].sort(
+        (a, b) =>
+          new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime(),
+      ),
     [snapshots],
   );
   const chartPoints = useMemo(
@@ -423,26 +547,42 @@ export function PhysicalTrackingDashboard() {
           label: formatShortDate(snapshot.measuredAt),
           value: getSnapshotMetricValue(snapshot, selectedField),
         }))
-        .filter((point): point is ChartPoint => typeof point.value === "number"),
+        .filter(
+          (point): point is ChartPoint => typeof point.value === "number",
+        ),
     [selectedField, sortedAscending],
   );
   const goalsByMetric = useMemo(() => {
-    return goals.reduce<Record<BodyMetric, BodyGoal[]>>((acc, goal) => {
-      acc[goal.metric] = [...(acc[goal.metric] ?? []), goal].sort((a, b) => a.level - b.level);
-      return acc;
-    }, {} as Record<BodyMetric, BodyGoal[]>);
+    return goals.reduce<Record<BodyMetric, BodyGoal[]>>(
+      (acc, goal) => {
+        acc[goal.metric] = [...(acc[goal.metric] ?? []), goal].sort(
+          (a, b) => a.level - b.level,
+        );
+        return acc;
+      },
+      {} as Record<BodyMetric, BodyGoal[]>,
+    );
   }, [goals]);
 
   function updateField(key: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function updateGoalField<K extends keyof GoalFormState>(key: K, value: GoalFormState[K]) {
+  function updateGoalField<K extends keyof GoalFormState>(
+    key: K,
+    value: GoalFormState[K],
+  ) {
     setGoalForm((current) => ({
       ...current,
       [key]: value,
-      ...(key === "goalType" && isMaintainType(value as BodyGoalType) ? { deadline: "", level: "0" } : {}),
-      ...(key === "goalType" && !isMaintainType(value as BodyGoalType) && current.level === "0" ? { level: "1" } : {}),
+      ...(key === "goalType" && isMaintainType(value as BodyGoalType)
+        ? { deadline: "", level: "0" }
+        : {}),
+      ...(key === "goalType" &&
+      !isMaintainType(value as BodyGoalType) &&
+      current.level === "0"
+        ? { level: "1" }
+        : {}),
     }));
   }
 
@@ -458,7 +598,9 @@ export function PhysicalTrackingDashboard() {
       setForm(emptyForm());
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible");
+      setError(
+        err instanceof Error ? err.message : "Enregistrement impossible",
+      );
     } finally {
       setSaving(false);
     }
@@ -473,12 +615,20 @@ export function PhysicalTrackingDashboard() {
 
     try {
       await api.saveBodyGoal(buildGoalPayload(goalForm));
-      setGoalMessage(isMaintainType(goalForm.goalType) ? "Objectif de maintien enregistré." : "Objectif par niveau enregistré.");
+      setGoalMessage(
+        isMaintainType(goalForm.goalType)
+          ? "Objectif de maintien enregistré."
+          : "Objectif par niveau enregistré.",
+      );
       setSelectedMetric(goalForm.metric);
       setGoalForm(emptyGoalForm());
       await refresh();
     } catch (err) {
-      setGoalError(err instanceof Error ? err.message : "Objectif impossible à enregistrer");
+      setGoalError(
+        err instanceof Error
+          ? err.message
+          : "Objectif impossible à enregistrer",
+      );
       setGoalsAvailable(false);
     } finally {
       setSavingGoal(false);
@@ -491,7 +641,9 @@ export function PhysicalTrackingDashboard() {
       await api.deleteBodyGoal(goal.id);
       await refresh();
     } catch (err) {
-      setGoalError(err instanceof Error ? err.message : "Suppression impossible");
+      setGoalError(
+        err instanceof Error ? err.message : "Suppression impossible",
+      );
     }
   }
 
@@ -507,7 +659,8 @@ export function PhysicalTrackingDashboard() {
         levels.map((targetValue, index) =>
           api.saveBodyGoal({
             metric,
-            goalType: metric === "WEIGHT_KG" || metric === "WAIST_CM" ? "LOSS" : "GAIN",
+            goalType:
+              metric === "WEIGHT_KG" || metric === "WAIST_CM" ? "LOSS" : "GAIN",
             level: index + 1,
             targetValue,
           }),
@@ -517,7 +670,9 @@ export function PhysicalTrackingDashboard() {
       setSelectedMetric(metric);
       await refresh();
     } catch (err) {
-      setGoalError(err instanceof Error ? err.message : "Création des niveaux impossible");
+      setGoalError(
+        err instanceof Error ? err.message : "Création des niveaux impossible",
+      );
       setGoalsAvailable(false);
     } finally {
       setSavingGoal(false);
@@ -533,8 +688,9 @@ export function PhysicalTrackingDashboard() {
           <span className="pill">Suivi physique</span>
           <h3>État courant du corps</h3>
           <p>
-            Ajoute ton poids, tes mensurations, puis suis tes niveaux et tes maintiens durables.
-            Le ratio torse / ventre donne un indicateur visuel rapide de transformation.
+            Ajoute ton poids, tes mensurations, puis suis tes niveaux et tes
+            maintiens durables. Le ratio torse / ventre donne un indicateur
+            visuel rapide de transformation.
           </p>
         </div>
 
@@ -551,14 +707,22 @@ export function PhysicalTrackingDashboard() {
         <div className="section-title">
           <div>
             <h3>Ajouter un état</h3>
-            <p>Tu peux aussi sélectionner une ancienne date pour saisir ton historique.</p>
+            <p>
+              Tu peux aussi sélectionner une ancienne date pour saisir ton
+              historique.
+            </p>
           </div>
         </div>
 
         <form className="body-form" onSubmit={submit}>
           <label className="wide">
             Date
-            <input type="date" value={form.measuredAt} onChange={(e) => updateField("measuredAt", e.target.value)} required />
+            <input
+              type="date"
+              value={form.measuredAt}
+              onChange={(e) => updateField("measuredAt", e.target.value)}
+              required
+            />
           </label>
 
           {inputFields.map((field) => (
@@ -578,7 +742,11 @@ export function PhysicalTrackingDashboard() {
 
           <label className="wide">
             Notes
-            <textarea value={form.notes} onChange={(e) => updateField("notes", e.target.value)} placeholder="Optionnel : photos prises, conditions, remarques..." />
+            <textarea
+              value={form.notes}
+              onChange={(e) => updateField("notes", e.target.value)}
+              placeholder="Optionnel : photos prises, conditions, remarques..."
+            />
           </label>
 
           {message && <p className="success wide">{message}</p>}
@@ -608,20 +776,38 @@ export function PhysicalTrackingDashboard() {
             {fields.map((field) => {
               const current = getSnapshotMetricValue(latest, field);
               const previousValue = getSnapshotMetricValue(previous, field);
-              const maintainGoal = getMaintainerForMetric(maintainGoals, field.metric);
-              const status = maintainGoal ? getGoalStatus(current, maintainGoal) : "unknown";
+              const maintainGoal = getMaintainerForMetric(
+                maintainGoals,
+                field.metric,
+              );
+              const status = maintainGoal
+                ? getGoalStatus(current, maintainGoal)
+                : "unknown";
               return (
                 <button
                   key={field.key}
                   type="button"
-                  className={getMetricCardClass(status, selectedMetric === field.metric)}
-                  style={field.key === "chestWaistRatio" ? getRatioStyle(current ?? undefined) : undefined}
+                  className={getMetricCardClass(
+                    status,
+                    selectedMetric === field.metric,
+                  )}
+                  style={
+                    field.key === "chestWaistRatio"
+                      ? getRatioStyle(current ?? undefined)
+                      : undefined
+                  }
                   onClick={() => setSelectedMetric(field.metric)}
                 >
                   <span>{field.label}</span>
                   <b>{formatValue(current, field.unit)}</b>
-                  {previous && <small>{getDelta(current, previousValue)}</small>}
-                  {maintainGoal && <em>{getGoalProgress(current, maintainGoal, field.unit)}</em>}
+                  {previous && (
+                    <small>{getDelta(current, previousValue)}</small>
+                  )}
+                  {maintainGoal && (
+                    <em>
+                      {getGoalProgress(current, maintainGoal, field.unit)}
+                    </em>
+                  )}
                 </button>
               );
             })}
@@ -639,7 +825,12 @@ export function PhysicalTrackingDashboard() {
 
         <div className="metric-tabs">
           {fields.map((field) => (
-            <button key={field.metric} type="button" className={selectedMetric === field.metric ? "active" : ""} onClick={() => setSelectedMetric(field.metric)}>
+            <button
+              key={field.metric}
+              type="button"
+              className={selectedMetric === field.metric ? "active" : ""}
+              onClick={() => setSelectedMetric(field.metric)}
+            >
               {field.shortLabel}
             </button>
           ))}
@@ -652,75 +843,143 @@ export function PhysicalTrackingDashboard() {
         <div className="section-title">
           <div>
             <h3>Objectifs</h3>
-            <p>Les pertes/progrès ont des niveaux. Les maintiens sont uniques par mesure et sans deadline.</p>
+            <p>
+              Les pertes/progrès ont des niveaux. Les maintiens sont uniques par
+              mesure et sans deadline.
+            </p>
           </div>
         </div>
 
         {!goalsAvailable && (
           <p className="warning">
-            Objectifs indisponibles : applique la migration Prisma puis relance le backend.
-            Le suivi physique et les graphiques restent utilisables.
+            Objectifs indisponibles : applique la migration Prisma puis relance
+            le backend. Le suivi physique et les graphiques restent utilisables.
             {goalError ? ` Détail : ${goalError}` : ""}
           </p>
         )}
 
-        <div className="quick-goal-actions">
-          <button type="button" onClick={() => createDefaultGoals("WEIGHT_KG")} disabled={savingGoal || !goalsAvailable}>Poids 100 / 95 / 90 / 85</button>
-          <button type="button" onClick={() => createDefaultGoals("WAIST_CM")} disabled={savingGoal || !goalsAvailable}>Ventre 110 / 105 / 100 / 95</button>
-          <button type="button" onClick={() => createDefaultGoals("CHEST_WAIST_RATIO")} disabled={savingGoal || !goalsAvailable}>Ratio 1.05 / 1.12 / 1.20 / 1.30</button>
-        </div>
-
-        <form className="goal-form" onSubmit={submitGoal} aria-disabled={!goalsAvailable}>
+        <form
+          className="goal-form"
+          onSubmit={submitGoal}
+          aria-disabled={!goalsAvailable}
+        >
           <label>
             Mesure
-            <select value={goalForm.metric} onChange={(e) => updateGoalField("metric", e.target.value as BodyMetric)} disabled={!goalsAvailable}>
-              {fields.map((field) => <option key={field.metric} value={field.metric}>{field.label}</option>)}
+            <select
+              value={goalForm.metric}
+              onChange={(e) =>
+                updateGoalField("metric", e.target.value as BodyMetric)
+              }
+              disabled={!goalsAvailable}
+            >
+              {fields.map((field) => (
+                <option key={field.metric} value={field.metric}>
+                  {field.label}
+                </option>
+              ))}
             </select>
           </label>
 
           <label>
             Type
-            <select value={goalForm.goalType} onChange={(e) => updateGoalField("goalType", e.target.value as BodyGoalType)} disabled={!goalsAvailable}>
-              {Object.entries(goalTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <select
+              value={goalForm.goalType}
+              onChange={(e) =>
+                updateGoalField("goalType", e.target.value as BodyGoalType)
+              }
+              disabled={!goalsAvailable}
+            >
+              {Object.entries(goalTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
 
           {!isMaintainForm && (
             <label>
               Niveau
-              <input type="number" min="1" step="1" inputMode="numeric" value={goalForm.level} onChange={(e) => updateGoalField("level", e.target.value)} required disabled={!goalsAvailable} />
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={goalForm.level}
+                onChange={(e) => updateGoalField("level", e.target.value)}
+                required
+                disabled={!goalsAvailable}
+              />
             </label>
           )}
 
           <label>
             {isMaintainForm ? "Limite de maintien" : "Valeur cible"}
-            <input type="number" min="0" step="0.01" inputMode="decimal" value={goalForm.targetValue} onChange={(e) => updateGoalField("targetValue", e.target.value)} placeholder={getFieldByMetric(goalForm.metric).unit || "ratio"} required disabled={!goalsAvailable} />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={goalForm.targetValue}
+              onChange={(e) => updateGoalField("targetValue", e.target.value)}
+              placeholder={getFieldByMetric(goalForm.metric).unit || "ratio"}
+              required
+              disabled={!goalsAvailable}
+            />
           </label>
 
           {isMaintainForm && (
             <label>
               Threshold / zone jaune
-              <input type="number" min="0" step="0.01" inputMode="decimal" value={goalForm.tolerance} onChange={(e) => updateGoalField("tolerance", e.target.value)} placeholder="Optionnel" disabled={!goalsAvailable} />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={goalForm.tolerance}
+                onChange={(e) => updateGoalField("tolerance", e.target.value)}
+                placeholder="Optionnel"
+                disabled={!goalsAvailable}
+              />
             </label>
           )}
 
           {!isMaintainForm && (
             <label>
               Deadline
-              <input type="date" value={goalForm.deadline} onChange={(e) => updateGoalField("deadline", e.target.value)} disabled={!goalsAvailable} />
+              <input
+                type="date"
+                value={goalForm.deadline}
+                onChange={(e) => updateGoalField("deadline", e.target.value)}
+                disabled={!goalsAvailable}
+              />
             </label>
           )}
 
           <label className="wide">
             Notes
-            <input value={goalForm.notes} onChange={(e) => updateGoalField("notes", e.target.value)} placeholder="Optionnel" disabled={!goalsAvailable} />
+            <input
+              value={goalForm.notes}
+              onChange={(e) => updateGoalField("notes", e.target.value)}
+              placeholder="Optionnel"
+              disabled={!goalsAvailable}
+            />
           </label>
 
           {goalMessage && <p className="success wide">{goalMessage}</p>}
-          {goalError && goalsAvailable && <p className="error wide">{goalError}</p>}
+          {goalError && goalsAvailable && (
+            <p className="error wide">{goalError}</p>
+          )}
 
-          <button className="primary wide" disabled={savingGoal || !goalsAvailable}>
-            {savingGoal ? "Enregistrement..." : isMaintainForm ? "Enregistrer le maintien" : "Enregistrer le niveau"}
+          <button
+            className="primary wide"
+            disabled={savingGoal || !goalsAvailable}
+          >
+            {savingGoal
+              ? "Enregistrement..."
+              : isMaintainForm
+                ? "Enregistrer le maintien"
+                : "Enregistrer le niveau"}
           </button>
         </form>
 
@@ -738,19 +997,45 @@ export function PhysicalTrackingDashboard() {
                     const status = getGoalStatus(current, goal);
                     const maintain = isMaintainType(goal.goalType);
                     return (
-                      <div key={goal.id} className={`goal-level status-${status}`}>
+                      <div
+                        key={goal.id}
+                        className={`goal-level status-${status}`}
+                      >
                         <div>
-                          <b>{maintain ? goalTypeLabels[goal.goalType] : `Niveau ${goal.level}`}</b>
-                          <span>{formatValue(goal.targetValue, field.unit)}</span>
+                          <b>
+                            {maintain
+                              ? goalTypeLabels[goal.goalType]
+                              : `Niveau ${goal.level}`}
+                          </b>
+                          <span>
+                            {formatValue(goal.targetValue, field.unit)}
+                          </span>
                         </div>
                         <small>
-                          {maintain ? "Maintien durable" : goal.deadline ? `Deadline ${formatDate(goal.deadline)}` : "Pas de deadline"}
-                          {goal.tolerance ? ` · threshold ${formatValue(goal.tolerance, field.unit)}` : ""}
-                          {" · "}{getGoalProgress(current, goal, field.unit)}
+                          {maintain
+                            ? "Maintien durable"
+                            : goal.deadline
+                              ? `Deadline ${formatDate(goal.deadline)}`
+                              : "Pas de deadline"}
+                          {goal.tolerance
+                            ? ` · threshold ${formatValue(goal.tolerance, field.unit)}`
+                            : ""}
+                          {" · "}
+                          {getGoalProgress(current, goal, field.unit)}
                         </small>
                         <div className="goal-actions">
-                          <button type="button" onClick={() => setGoalForm(goalToForm(goal))}>Modifier</button>
-                          <button type="button" onClick={() => removeGoal(goal)}>Supprimer</button>
+                          <button
+                            type="button"
+                            onClick={() => setGoalForm(goalToForm(goal))}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeGoal(goal)}
+                          >
+                            Supprimer
+                          </button>
                         </div>
                       </div>
                     );
@@ -775,10 +1060,17 @@ export function PhysicalTrackingDashboard() {
                 <div>
                   <b>{formatDate(snapshot.measuredAt)}</b>
                   <span>
-                    {formatValue(snapshot.weightKg, "kg")} · ventre {formatValue(snapshot.waistCm, "cm")} · ratio {formatValue(getRatio(snapshot))}
+                    {formatValue(snapshot.weightKg, "kg")} · ventre{" "}
+                    {formatValue(snapshot.waistCm, "cm")} · ratio{" "}
+                    {formatValue(getRatio(snapshot))}
                   </span>
                 </div>
-                <button type="button" onClick={() => setForm(snapshotToForm(snapshot))}>Modifier</button>
+                <button
+                  type="button"
+                  onClick={() => setForm(snapshotToForm(snapshot))}
+                >
+                  Modifier
+                </button>
               </article>
             ))}
           </div>
