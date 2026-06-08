@@ -231,16 +231,6 @@ export function UserDashboard({ user }: { user: User }) {
     refresh();
   }, []);
 
-  if (active && focusMode) {
-    return (
-      <WorkoutExecutionScreen
-        session={active}
-        exercises={exercises}
-        onRefresh={refresh}
-        onExitFocus={() => setFocusMode(false)}
-      />
-    );
-  }
 
   function openGymTab(tab: Exclude<DashboardTab, "physical">) {
     setActiveDomain("gym");
@@ -525,6 +515,17 @@ export function UserDashboard({ user }: { user: User }) {
       </article>
     );
   };
+
+  if (active && focusMode) {
+    return (
+      <WorkoutExecutionScreen
+        session={active}
+        exercises={exercises}
+        onRefresh={refresh}
+        onExitFocus={() => setFocusMode(false)}
+      />
+    );
+  }
 
   return (
     <main className="layout simplified-dashboard app-dashboard-v2">
