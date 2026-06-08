@@ -706,7 +706,14 @@ export function PhysicalTrackingDashboard({
   }
 
   const isMaintainForm = isMaintainType(goalForm.goalType);
-  const weightDelta = getDelta(latest?.weightKg, previous?.weightKg);
+  const initialSnapshot = sortedAscending[0];
+  const weightStartDelta = getDelta(latest?.weightKg, initialSnapshot?.weightKg);
+  const waistStartDelta = getDelta(latest?.waistCm, initialSnapshot?.waistCm);
+  const weightTarget = getBestGoalForField(getFieldByMetric("WEIGHT_KG"))?.targetValue ?? 90;
+  const waistTarget = getBestGoalForField(getFieldByMetric("WAIST_CM"))?.targetValue;
+  const weightProgressPercent = latest?.weightKg
+    ? Math.max(0, Math.min(100, ((initialSnapshot?.weightKg ?? latest.weightKg) - latest.weightKg) / Math.max(((initialSnapshot?.weightKg ?? latest.weightKg) - weightTarget), 1) * 100))
+    : 0;
   const heroSubtitle = latest
     ? `Dernière mesure · ${formatDate(latest.measuredAt)}`
     : "Ajoute ta première mesure pour débloquer le suivi.";
@@ -715,27 +722,20 @@ export function PhysicalTrackingDashboard({
     <section className="physical-dashboard physical-dashboard-v2 physical-dashboard-tabs-v3">
       {activePhysicalTab === "dashboard" && (
         <>
-          <section className="card physical-focus-card">
+          <section className="card physical-focus-card physical-progress-hero-card">
             <div className="physical-focus-topline">
               <span className="pill">Physique</span>
               <span>{heroSubtitle}</span>
             </div>
 
-            <div className="physical-focus-main">
-              <div>
-                <span>Poids actuel</span>
-                <strong>{formatValue(latest?.weightKg, "kg")}</strong>
-                {weightDelta && (
-                  <small>{weightDelta} depuis la dernière mesure</small>
-                )}
-              </div>
-              <div
-                className="physical-ratio-summary"
-                style={getRatioStyle(latestRatio)}
-              >
-                <span>Ratio torse / ventre</span>
-                <strong>{formatValue(latestRatio)}</strong>
-                <small>1.00 rouge · 1.12 jaune · 1.30 vert</small>
+            <div className="physical-weight-hero">
+              <span>Poids actuel</span>
+              <strong>{formatValue(latest?.weightKg, "kg")}</strong>
+              <small>
+                {weightStartDelta || "= stable"} depuis le début · Objectif {formatValue(weightTarget, "kg")}
+              </small>
+              <div className="goal-progress-track hero-weight-progress">
+                <span style={{ width: `${weightProgressPercent}%` }} />
               </div>
             </div>
 
@@ -746,6 +746,19 @@ export function PhysicalTrackingDashboard({
             >
               {showMeasureForm ? "Fermer la saisie" : "+ Ajouter une mesure"}
             </button>
+          </section>
+
+          <section className="card physical-secondary-kpis">
+            <div className="body-main-secondary-card">
+              <span>Tour de ventre</span>
+              <strong>{formatValue(latest?.waistCm, "cm")}</strong>
+              <small>{waistStartDelta || "= stable"} depuis le début{waistTarget ? ` · objectif ${formatValue(waistTarget, "cm")}` : ""}</small>
+            </div>
+            <div className="body-main-secondary-card ratio-secondary-card">
+              <span>Ratio torse / ventre</span>
+              <strong>{formatValue(latestRatio)}</strong>
+              <small>1.00 rouge · 1.12 jaune · 1.30 vert</small>
+            </div>
           </section>
 
           {showMeasureForm && (
@@ -811,7 +824,7 @@ export function PhysicalTrackingDashboard({
               <div>
                 <h3>Indicateurs clés</h3>
                 <p>
-                  Couleurs liées aux objectifs de maintien quand ils existent.
+                  Valeur actuelle et variation depuis la dernière mesure.
                 </p>
               </div>
             </div>

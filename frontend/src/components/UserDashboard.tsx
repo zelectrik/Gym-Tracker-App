@@ -54,6 +54,21 @@ function formatSessionDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function daysSince(value?: string | null) {
+  if (!value) return null;
+  const diffMs = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return null;
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+function formatLastDone(value?: string | null) {
+  const days = daysSince(value);
+  if (days === null) return "Jamais réalisée";
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return "Hier";
+  return `Il y a ${days} jours`;
+}
+
 function TabButton({
   active,
   children,
@@ -248,28 +263,63 @@ export function UserDashboard({ user }: { user: User }) {
     });
   }
 
+  const recommendedTemplate = useMemo(() => {
+    if (!templates.length) return null;
+    const lastCompleted = completedSessions[0];
+    if (lastCompleted?.templateId) {
+      return templates.find((template) => template.id === lastCompleted.templateId) ?? templates[0];
+    }
+    return templates[0];
+  }, [completedSessions, templates]);
+
+  const recommendedLastDone = useMemo(() => {
+    if (!recommendedTemplate) return null;
+    return completedSessions.find((session) => session.templateId === recommendedTemplate.id || session.title === recommendedTemplate.name);
+  }, [completedSessions, recommendedTemplate]);
+
   const renderTemplateCard = (template: WorkoutTemplate) => {
     const isExpanded = expandedTemplateIds.includes(template.id);
     const duration = estimateTemplateDuration(template);
 
     return (
-      <article className="mini-card workout-template-card compact-template-card" key={template.id}>
-        <div className="compact-template-main">
+      <article className="mini-card workout-template-card daily-template-card" key={template.id}>
+        <div className="daily-template-main">
           <div>
             <h4>{template.name}</h4>
             <p>
               {template.exercises.length} exos
               {duration ? ` · ${duration}` : ""}
             </p>
-            {template.description && <small>{template.description}</small>}
           </div>
-          <button
-            className="primary compact-launch-button"
-            onClick={() => launch(template)}
-            disabled={Boolean(launchingTemplateId)}
-          >
-            {launchingTemplateId === template.id ? "..." : "Lancer"}
-          </button>
+          <div className="template-quick-actions">
+            <button
+              className="primary compact-launch-button"
+              onClick={() => launch(template)}
+              disabled={Boolean(launchingTemplateId)}
+            >
+              {launchingTemplateId === template.id ? "..." : "Lancer"}
+            </button>
+            <details className="context-menu">
+              <summary aria-label="Actions du programme">…</summary>
+              <div>
+                <button type="button" onClick={() => toggleTemplateDetails(template.id)}>
+                  {isExpanded ? "Masquer détails" : "Voir détails"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTemplate(template);
+                    openGymTab("programs");
+                  }}
+                >
+                  Modifier
+                </button>
+                <button type="button" className="danger" onClick={() => deleteTemplate(template)}>
+                  Supprimer
+                </button>
+              </div>
+            </details>
+          </div>
         </div>
 
         {isExpanded && (
@@ -282,21 +332,6 @@ export function UserDashboard({ user }: { user: User }) {
             ))}
           </ul>
         )}
-
-        <div className="template-card-actions compact-template-actions">
-          <button type="button" onClick={() => toggleTemplateDetails(template.id)}>
-            {isExpanded ? "Masquer" : "Détails"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingTemplate(template);
-              openGymTab("programs");
-            }}
-          >
-            Modifier
-          </button>
-        </div>
       </article>
     );
   };
@@ -345,51 +380,82 @@ export function UserDashboard({ user }: { user: User }) {
       </nav>
 
       {activeDomain === "gym" && activeTab === "sessions" && (
-        <section className="card sessions-home-card">
-          <div className="section-title compact-section-title">
-            <div>
-              <span className="pill">Aujourd'hui</span>
-              <h3>Quel entraînement ?</h3>
-              <p>Lance vite ta séance, les détails restent masqués pour gagner de la place.</p>
+        <>
+          <section className="card gym-action-hero-card">
+            <div className="gym-action-eyebrow">
+              <span className="pill">Séance du jour</span>
+              <span>{recommendedTemplate ? formatLastDone(recommendedLastDone ? getCompletedAt(recommendedLastDone) : null) : "Aucun programme"}</span>
             </div>
-          </div>
 
-          {progress && (
-            <div className="session-micro-stats">
-              <span>{progress.totalSessions} séances</span>
-              <span>{progress.totalSets} séries</span>
-              <span>{Math.round(progress.totalVolumeKg)} kg</span>
-            </div>
-          )}
-
-          <div className="cards compact-session-list">
-            {templates.map(renderTemplateCard)}
-            {templates.length === 0 && <p>Aucun entraînement enregistré pour le moment.</p>}
-          </div>
+            {recommendedTemplate ? (
+              <>
+                <div className="gym-action-main">
+                  <div>
+                    <h2>{recommendedTemplate.name}</h2>
+                    <p>
+                      {recommendedTemplate.exercises.length} exercices
+                      {estimateTemplateDuration(recommendedTemplate) ? ` · ${estimateTemplateDuration(recommendedTemplate)}` : ""}
+                    </p>
+                    <small>Dernière fois : {formatLastDone(recommendedLastDone ? getCompletedAt(recommendedLastDone) : null)}</small>
+                  </div>
+                </div>
+                <button
+                  className="primary hero-launch-button"
+                  onClick={() => launch(recommendedTemplate)}
+                  disabled={Boolean(launchingTemplateId)}
+                >
+                  {launchingTemplateId === recommendedTemplate.id ? "Lancement..." : "Lancer la séance"}
+                </button>
+              </>
+            ) : (
+              <p>Aucun entraînement enregistré pour le moment.</p>
+            )}
+          </section>
 
           {recentCompletedSessions.length > 0 && (
-            <div className="recent-sessions-strip">
-              <h4>Récent</h4>
-              {recentCompletedSessions.map((session) => (
-                <button
-                  key={session.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedHistorySession(session);
-                    openGymTab("history");
-                  }}
-                >
-                  <b>{session.title}</b>
-                  <span>{formatSessionDate(getCompletedAt(session))}</span>
-                </button>
-              ))}
-            </div>
+            <section className="card quick-history-card">
+              <div className="section-title compact-section-title">
+                <div>
+                  <h3>Dernières séances</h3>
+                  <p>Accès rapide à tes dernières séances terminées.</p>
+                </div>
+              </div>
+              <div className="recent-sessions-strip refined-recent-sessions">
+                {recentCompletedSessions.map((session) => (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedHistorySession(session);
+                      openGymTab("history");
+                    }}
+                  >
+                    <b>{session.title}</b>
+                    <span>{formatLastDone(getCompletedAt(session))}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
 
-          <button type="button" className="manage-programs-button" onClick={() => openGymTab("programs")}>
-            Gérer les programmes
-          </button>
-        </section>
+          <section className="card sessions-home-card secondary-programs-card">
+            <div className="section-title compact-section-title">
+              <div>
+                <span className="pill">Programmes</span>
+                <h3>Tous les programmes</h3>
+              </div>
+            </div>
+
+            <div className="cards compact-session-list">
+              {templates.map(renderTemplateCard)}
+              {templates.length === 0 && <p>Aucun entraînement enregistré pour le moment.</p>}
+            </div>
+
+            <button type="button" className="manage-programs-button" onClick={() => openGymTab("programs")}>
+              Gérer les programmes
+            </button>
+          </section>
+        </>
       )}
 
       {activeDomain === "gym" && activeTab === "history" && (

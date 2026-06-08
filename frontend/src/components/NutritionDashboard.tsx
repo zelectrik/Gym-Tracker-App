@@ -184,6 +184,7 @@ export function NutritionDashboard({
   const [form, setForm] = useState<NutritionFormState>(() => emptyForm());
   const [showForm, setShowForm] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [expandedMealType, setExpandedMealType] = useState<MealType | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -213,6 +214,20 @@ export function NutritionDashboard({
     [entries],
   );
   const todayTotals = useMemo(() => getTotals(todayEntries), [todayEntries]);
+  const caloriesRemaining = Math.max(0, dailyTargets.calories - todayTotals.calories);
+  const mealSummaries = useMemo(() => {
+    return Object.entries(mealTypeLabels)
+      .map(([mealType, label]) => {
+        const mealEntries = todayEntries.filter((entry) => entry.mealType === mealType);
+        return {
+          mealType: mealType as MealType,
+          label,
+          entries: mealEntries,
+          ...getTotals(mealEntries),
+        };
+      })
+      .filter((meal) => meal.entries.length > 0);
+  }, [todayEntries]);
   const daySummaries = useMemo(
     () => buildDaySummaries(entries, startDate, endDate),
     [entries, startDate, endDate],
@@ -281,14 +296,15 @@ export function NutritionDashboard({
     <section className="nutrition-dashboard">
       {activeNutritionTab === "dashboard" && (
         <>
-          <section className="card nutrition-hero-card">
+          <section className="card nutrition-hero-card nutrition-action-hero-card">
             <div className="nutrition-hero-topline">
               <span className="pill">Nutrition</span>
               <span>Aujourd'hui · {formatDate(todayLocalDate())}</span>
             </div>
-            <div>
-              <h3>Dashboard nutrition</h3>
-              <p>Calories et macros de la journée pour suivre ton déficit.</p>
+            <div className="nutrition-remaining-hero">
+              <span>Il reste</span>
+              <strong>{formatNumber(caloriesRemaining, " kcal")}</strong>
+              <small>{formatNumber(todayTotals.calories, " kcal")} consommées / {formatNumber(dailyTargets.calories, " kcal")}</small>
             </div>
 
             <div className="nutrition-progress-list">
@@ -436,23 +452,58 @@ export function NutritionDashboard({
             </section>
           )}
 
-          {todayEntries.length > 0 && (
-            <section className="card nutrition-today-card">
-              <h3>Aujourd'hui</h3>
-              <div className="nutrition-entry-list">
-                {todayEntries.map((entry) => (
-                  <article key={entry.id} className="nutrition-entry-row">
-                    <div>
-                      <b>{entry.description}</b>
-                      <span>
-                        {mealTypeLabels[entry.mealType]} ·{" "}
-                        {formatNumber(entry.calories, " kcal")} · prot{" "}
-                        {formatNumber(entry.proteinG, " g")}
-                      </span>
-                    </div>
-                    <button type="button" onClick={() => deleteEntry(entry)}>
-                      Supprimer
+          {mealSummaries.length > 0 && (
+            <section className="card nutrition-today-card nutrition-meal-summary-card">
+              <div className="section-title compact-section-title">
+                <div>
+                  <h3>Repas du jour</h3>
+                  <p>Résumé compact, détail au clic.</p>
+                </div>
+              </div>
+              <div className="nutrition-meal-summary-list">
+                {mealSummaries.map((meal) => (
+                  <article key={meal.mealType} className="nutrition-meal-summary-item">
+                    <button
+                      type="button"
+                      className="nutrition-meal-summary-button"
+                      onClick={() =>
+                        setExpandedMealType((current) =>
+                          current === meal.mealType ? null : meal.mealType,
+                        )
+                      }
+                    >
+                      <div>
+                        <b>{meal.label}</b>
+                        <span>{meal.entries.length} entrée{meal.entries.length > 1 ? "s" : ""}</span>
+                      </div>
+                      <div>
+                        <strong>{formatNumber(meal.calories, " kcal")}</strong>
+                        <small>{formatNumber(meal.proteinG, " g")} protéines</small>
+                      </div>
                     </button>
+
+                    {expandedMealType === meal.mealType && (
+                      <div className="nutrition-entry-list compact-nutrition-details">
+                        {meal.entries.map((entry) => (
+                          <article key={entry.id} className="nutrition-entry-row compact-nutrition-entry-row">
+                            <div>
+                              <b>{entry.description}</b>
+                              <span>
+                                {formatNumber(entry.calories, " kcal")} · P {formatNumber(entry.proteinG, " g")} · L {formatNumber(entry.fatG, " g")} · G {formatNumber(entry.carbsG, " g")}
+                              </span>
+                            </div>
+                            <details className="context-menu small-context-menu">
+                              <summary aria-label="Actions alimentation">…</summary>
+                              <div>
+                                <button type="button" className="danger" onClick={() => deleteEntry(entry)}>
+                                  Supprimer
+                                </button>
+                              </div>
+                            </details>
+                          </article>
+                        ))}
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -554,7 +605,7 @@ export function NutritionDashboard({
               ) : (
                 <div className="nutrition-entry-list">
                   {selectedDaySummary.entries.map((entry) => (
-                    <article key={entry.id} className="nutrition-entry-row">
+                    <article key={entry.id} className="nutrition-entry-row compact-nutrition-entry-row">
                       <div>
                         <b>{entry.description}</b>
                         <span>
@@ -565,9 +616,14 @@ export function NutritionDashboard({
                           {formatNumber(entry.carbsG, " g")}
                         </span>
                       </div>
-                      <button type="button" onClick={() => deleteEntry(entry)}>
-                        Supprimer
-                      </button>
+                      <details className="context-menu small-context-menu">
+                        <summary aria-label="Actions alimentation">…</summary>
+                        <div>
+                          <button type="button" className="danger" onClick={() => deleteEntry(entry)}>
+                            Supprimer
+                          </button>
+                        </div>
+                      </details>
                     </article>
                   ))}
                 </div>
