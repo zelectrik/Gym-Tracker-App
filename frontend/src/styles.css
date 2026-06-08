@@ -3493,3 +3493,142 @@ button.danger:hover,
     text-align: left;
   }
 }
+
+/* ===== WORKOUT SCHEDULE CYCLE V31 ===== */
+.workout-cycle-card {
+  display: grid;
+  gap: 14px;
+}
+
+.cycle-start-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.cycle-start-row label {
+  display: grid;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.cycle-start-row input,
+.cycle-day-fields input,
+.cycle-day-fields select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #dbe7ff;
+  border-radius: 14px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 800;
+}
+
+.cycle-preset-actions,
+.cycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cycle-preset-actions button,
+.cycle-actions button,
+.rest-day-hero button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.cycle-editor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cycle-day-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.cycle-day-number {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 950;
+}
+
+.cycle-day-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  gap: 8px;
+}
+
+.cycle-remove-button {
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  color: #dc2626;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.cycle-current-day {
+  padding: 10px 12px;
+  border: 1px solid #dbe7ff;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.rest-day-hero {
+  display: grid;
+  gap: 10px;
+}
+
+.rest-day-hero h2 {
+  margin: 0;
+  font-size: 34px;
+}
+
+@media (max-width: 640px) {
+  .cycle-start-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cycle-preset-actions,
+  .cycle-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cycle-day-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cycle-day-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .cycle-remove-button {
+    grid-column: 2;
+    justify-self: end;
+  }
+}

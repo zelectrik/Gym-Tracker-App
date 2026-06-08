@@ -20,6 +20,8 @@ import type {
   BodyGoalPayload,
   NutritionEntry,
   NutritionEntryPayload,
+  WorkoutSchedule,
+  WorkoutSchedulePayload,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -100,6 +102,16 @@ export const api = {
       body: JSON.stringify(body),
     }),
   templates: () => request<WorkoutTemplate[]>("/workouts/templates"),
+  workoutSchedule: () => request<WorkoutSchedule>("/workouts/schedule"),
+  saveWorkoutSchedule: (body: WorkoutSchedulePayload) =>
+    request<WorkoutSchedule>("/workouts/schedule", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  clearWorkoutSchedule: () =>
+    request("/workouts/schedule", {
+      method: "DELETE",
+    }),
   importProgramTemplates: (body: ImportProgramPayload) =>
     request<ImportProgramResult>("/workouts/templates/import-json", {
       method: "POST",

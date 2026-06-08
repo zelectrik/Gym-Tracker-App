@@ -106,6 +106,34 @@ export type WorkoutTemplate = {
   exercises: TemplateExercise[];
   createdAt?: string;
 };
+
+export type WorkoutScheduleDay = {
+  id: string;
+  userId: string;
+  dayIndex: number;
+  templateId?: string | null;
+  isRest: boolean;
+  label?: string | null;
+  template?: WorkoutTemplate | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type WorkoutSchedule = {
+  startsAt?: string | null;
+  days: WorkoutScheduleDay[];
+};
+
+export type WorkoutSchedulePayload = {
+  startsAt?: string;
+  days: Array<{
+    dayIndex: number;
+    templateId?: string | null;
+    isRest?: boolean;
+    label?: string;
+  }>;
+};
+
 export type ExerciseSet = {
   id: string;
   sessionExerciseId: string;

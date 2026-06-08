@@ -18,6 +18,11 @@ import {
   getSessionExerciseSuggestionsHandler,
 } from "../controllers/workout.controller";
 import { requireAuth } from "../middlewares/auth.middleware";
+import {
+  clearWorkoutScheduleHandler,
+  getWorkoutScheduleHandler,
+  upsertWorkoutScheduleHandler,
+} from "../controllers/workoutSchedule.controller";
 
 const router = Router();
 
@@ -27,6 +32,9 @@ router.post("/templates", createTemplateHandler);
 router.patch("/templates/:templateId", updateTemplateHandler);
 router.delete("/templates/:templateId", deleteTemplateHandler);
 router.post("/templates/import-json", importProgramTemplatesHandler);
+router.get("/schedule", getWorkoutScheduleHandler);
+router.put("/schedule", upsertWorkoutScheduleHandler);
+router.delete("/schedule", clearWorkoutScheduleHandler);
 router.get("/exercises/:exerciseId/last-performance", getLastExercisePerformanceHandler);
 router.get("/sessions", getSessionsHandler);
 router.post("/sessions", createSessionHandler);

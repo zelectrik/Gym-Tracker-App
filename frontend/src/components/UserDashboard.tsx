@@ -6,6 +6,8 @@ import type {
   User,
   WorkoutSession,
   WorkoutTemplate,
+  WorkoutSchedule,
+  WorkoutSchedulePayload,
 } from "../types";
 import { modeLabels } from "../utils/workoutLabels";
 import { WorkoutExecutionScreen } from "./workout/WorkoutExecutionScreen";
@@ -120,6 +122,60 @@ function templateToImportProgram(template: WorkoutTemplate) {
   };
 }
 
+
+type ScheduleEditorDay = {
+  id: string;
+  templateId: string;
+  isRest: boolean;
+  label: string;
+};
+
+function todayLocalDate() {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function toLocalDateInput(value?: string | null) {
+  if (!value) return todayLocalDate();
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function getScheduleDayIndex(startsAt?: string | null, cycleLength = 0) {
+  if (!startsAt || cycleLength <= 0) return null;
+  const start = new Date(`${toLocalDateInput(startsAt)}T12:00:00`);
+  const today = new Date(`${todayLocalDate()}T12:00:00`);
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return ((diffDays % cycleLength) + cycleLength) % cycleLength + 1;
+}
+
+function scheduleToEditor(schedule: WorkoutSchedule | null): ScheduleEditorDay[] {
+  if (!schedule?.days.length) return [];
+  return schedule.days
+    .slice()
+    .sort((a, b) => a.dayIndex - b.dayIndex)
+    .map((day) => ({
+      id: day.id,
+      templateId: day.templateId ?? "",
+      isRest: day.isRest || !day.templateId,
+      label: day.label ?? "",
+    }));
+}
+
+function buildSchedulePayload(startsAt: string, days: ScheduleEditorDay[]): WorkoutSchedulePayload {
+  return {
+    startsAt,
+    days: days.map((day, index) => ({
+      dayIndex: index + 1,
+      templateId: day.isRest ? null : day.templateId,
+      isRest: day.isRest,
+      label: day.label.trim() || undefined,
+    })),
+  };
+}
+
 export function UserDashboard({ user }: { user: User }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
@@ -135,6 +191,12 @@ export function UserDashboard({ user }: { user: User }) {
   const [selectedHistorySession, setSelectedHistorySession] = useState<WorkoutSession | null>(null);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
+  const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutSchedule | null>(null);
+  const [scheduleStartsAt, setScheduleStartsAt] = useState(todayLocalDate());
+  const [scheduleEditorDays, setScheduleEditorDays] = useState<ScheduleEditorDay[]>([]);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleMessage, setScheduleMessage] = useState("");
+  const [scheduleError, setScheduleError] = useState("");
 
   const active = sessions.find((s) => s.status === "IN_PROGRESS");
   const completedSessions = useMemo(
@@ -144,17 +206,25 @@ export function UserDashboard({ user }: { user: User }) {
   const recentCompletedSessions = completedSessions.slice(0, 3);
 
   async function refresh() {
-    const [ex, tpl, ses, prog] = await Promise.all([
+    const [ex, tpl, ses, prog, scheduleResult] = await Promise.all([
       api.exercises(),
       api.templates(),
       api.sessions(),
       api.progress(),
+      api.workoutSchedule().catch(() => null),
     ]);
 
     setExercises(ex);
     setTemplates(tpl);
     setSessions(ses);
     setProgress(prog);
+
+    if (scheduleResult) {
+      setWorkoutSchedule(scheduleResult);
+      setScheduleStartsAt(toLocalDateInput(scheduleResult.startsAt));
+      setScheduleEditorDays(scheduleToEditor(scheduleResult));
+      setScheduleError("");
+    }
   }
 
   useEffect(() => {
@@ -263,19 +333,139 @@ export function UserDashboard({ user }: { user: User }) {
     });
   }
 
+  const activeScheduleDayIndex = useMemo(
+    () => getScheduleDayIndex(workoutSchedule?.startsAt, workoutSchedule?.days.length ?? 0),
+    [workoutSchedule],
+  );
+
+  const activeScheduleDay = useMemo(() => {
+    if (!workoutSchedule?.days.length || activeScheduleDayIndex === null) return null;
+    return workoutSchedule.days.find((day) => day.dayIndex === activeScheduleDayIndex) ?? null;
+  }, [activeScheduleDayIndex, workoutSchedule]);
+
   const recommendedTemplate = useMemo(() => {
     if (!templates.length) return null;
-    const lastCompleted = completedSessions[0];
-    if (lastCompleted?.templateId) {
-      return templates.find((template) => template.id === lastCompleted.templateId) ?? templates[0];
+    if (activeScheduleDay?.templateId && !activeScheduleDay.isRest) {
+      return templates.find((template) => template.id === activeScheduleDay.templateId) ?? activeScheduleDay.template ?? templates[0];
     }
+    if (workoutSchedule?.days.length && activeScheduleDay?.isRest) return null;
     return templates[0];
-  }, [completedSessions, templates]);
+  }, [activeScheduleDay, templates, workoutSchedule]);
 
   const recommendedLastDone = useMemo(() => {
     if (!recommendedTemplate) return null;
     return completedSessions.find((session) => session.templateId === recommendedTemplate.id || session.title === recommendedTemplate.name);
   }, [completedSessions, recommendedTemplate]);
+
+  const scheduleHeroLabel = workoutSchedule?.days.length
+    ? activeScheduleDay?.isRest
+      ? `J${activeScheduleDay.dayIndex} · Repos`
+      : activeScheduleDay
+        ? `J${activeScheduleDay.dayIndex} / ${workoutSchedule.days.length}`
+        : "Cycle défini"
+    : "Aucun cycle défini";
+
+  function addScheduleDay() {
+    setScheduleEditorDays((days) => [
+      ...days,
+      { id: `new-${Date.now()}`, templateId: templates[0]?.id ?? "", isRest: templates.length === 0, label: "" },
+    ]);
+  }
+
+  function updateScheduleDay(index: number, patch: Partial<ScheduleEditorDay>) {
+    setScheduleEditorDays((days) =>
+      days.map((day, dayIndex) => (dayIndex === index ? { ...day, ...patch } : day)),
+    );
+  }
+
+  function removeScheduleDay(index: number) {
+    setScheduleEditorDays((days) => days.filter((_, dayIndex) => dayIndex !== index));
+  }
+
+  function createPresetCycle(type: "ppl7" | "ppl4") {
+    const findTemplate = (keyword: string) =>
+      templates.find((template) => template.name.toLowerCase().includes(keyword))?.id ?? "";
+
+    const pushId = findTemplate("push");
+    const pullId = findTemplate("pull");
+    const legId = findTemplate("leg") || findTemplate("jamb");
+
+    const base = type === "ppl7"
+      ? [
+          { label: "PUSH", templateId: pushId },
+          { label: "PULL", templateId: pullId },
+          { label: "LEGS", templateId: legId },
+          { label: "PUSH", templateId: pushId },
+          { label: "PULL", templateId: pullId },
+          { label: "REPOS", templateId: "", isRest: true },
+          { label: "REPOS", templateId: "", isRest: true },
+        ]
+      : [
+          { label: "PUSH", templateId: pushId },
+          { label: "PULL", templateId: pullId },
+          { label: "LEGS", templateId: legId },
+          { label: "REPOS", templateId: "", isRest: true },
+        ];
+
+    setScheduleEditorDays(
+      base.map((day, index) => ({
+        id: `preset-${type}-${index}`,
+        templateId: day.templateId,
+        isRest: Boolean(day.isRest || !day.templateId),
+        label: day.label,
+      })),
+    );
+    setScheduleMessage("Modèle chargé. Vérifie les programmes puis enregistre.");
+  }
+
+  async function saveSchedule() {
+    if (!scheduleEditorDays.length) {
+      setScheduleError("Ajoute au moins un jour au cycle.");
+      return;
+    }
+
+    const invalidDay = scheduleEditorDays.find((day) => !day.isRest && !day.templateId);
+    if (invalidDay) {
+      setScheduleError("Chaque jour d'entraînement doit avoir un programme.");
+      return;
+    }
+
+    setScheduleSaving(true);
+    setScheduleError("");
+    setScheduleMessage("");
+
+    try {
+      const saved = await api.saveWorkoutSchedule(buildSchedulePayload(scheduleStartsAt, scheduleEditorDays));
+      setWorkoutSchedule(saved);
+      setScheduleStartsAt(toLocalDateInput(saved.startsAt));
+      setScheduleEditorDays(scheduleToEditor(saved));
+      setScheduleMessage("Cycle enregistré.");
+    } catch (err) {
+      setScheduleError(err instanceof Error ? err.message : "Cycle impossible à enregistrer.");
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
+
+  async function clearSchedule() {
+    const confirmed = confirm("Supprimer le cycle d'entraînement ?");
+    if (!confirmed) return;
+
+    setScheduleSaving(true);
+    setScheduleError("");
+    setScheduleMessage("");
+
+    try {
+      await api.clearWorkoutSchedule();
+      setWorkoutSchedule({ startsAt: null, days: [] });
+      setScheduleEditorDays([]);
+      setScheduleMessage("Cycle supprimé. L'app utilisera le premier programme.");
+    } catch (err) {
+      setScheduleError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
 
   const renderTemplateCard = (template: WorkoutTemplate) => {
     const isExpanded = expandedTemplateIds.includes(template.id);
@@ -384,7 +574,7 @@ export function UserDashboard({ user }: { user: User }) {
           <section className="card gym-action-hero-card">
             <div className="gym-action-eyebrow">
               <span className="pill">Séance du jour</span>
-              <span>{recommendedTemplate ? formatLastDone(recommendedLastDone ? getCompletedAt(recommendedLastDone) : null) : "Aucun programme"}</span>
+              <span>{scheduleHeroLabel}</span>
             </div>
 
             {recommendedTemplate ? (
@@ -407,6 +597,12 @@ export function UserDashboard({ user }: { user: User }) {
                   {launchingTemplateId === recommendedTemplate.id ? "Lancement..." : "Lancer la séance"}
                 </button>
               </>
+            ) : activeScheduleDay?.isRest ? (
+              <div className="rest-day-hero">
+                <h2>Repos prévu</h2>
+                <p>Ton cycle indique un jour de récupération aujourd'hui.</p>
+                <button type="button" onClick={() => openGymTab("programs")}>Modifier le cycle</button>
+              </div>
             ) : (
               <p>Aucun entraînement enregistré pour le moment.</p>
             )}
@@ -515,6 +711,85 @@ export function UserDashboard({ user }: { user: User }) {
               refresh();
             }}
           />
+
+          {!editingTemplate && (
+            <section className="card workout-cycle-card">
+              <div className="section-title compact-section-title">
+                <div>
+                  <span className="pill">Séance du jour</span>
+                  <h3>Cycle d'entraînement</h3>
+                  <p>Définis ton ordre personnalisé : J1, J2, J3... puis l'app recommence automatiquement.</p>
+                </div>
+              </div>
+
+              <div className="cycle-start-row">
+                <label>
+                  Début du cycle
+                  <input
+                    type="date"
+                    value={scheduleStartsAt}
+                    onChange={(e) => setScheduleStartsAt(e.target.value)}
+                  />
+                </label>
+                <div className="cycle-preset-actions">
+                  <button type="button" onClick={() => createPresetCycle("ppl7")}>PPL 7 jours</button>
+                  <button type="button" onClick={() => createPresetCycle("ppl4")}>PPL 4 jours</button>
+                </div>
+              </div>
+
+              <div className="cycle-editor-list">
+                {scheduleEditorDays.length === 0 && (
+                  <p className="muted">Aucun cycle défini. L'app utilise le premier programme disponible.</p>
+                )}
+
+                {scheduleEditorDays.map((day, index) => (
+                  <article key={day.id} className="cycle-day-row">
+                    <div className="cycle-day-number">J{index + 1}</div>
+                    <div className="cycle-day-fields">
+                      <input
+                        value={day.label}
+                        onChange={(e) => updateScheduleDay(index, { label: e.target.value })}
+                        placeholder={day.isRest ? "REPOS" : "PUSH / PULL / LEG..."}
+                      />
+                      <select
+                        value={day.isRest ? "REST" : day.templateId}
+                        onChange={(e) => {
+                          const isRest = e.target.value === "REST";
+                          updateScheduleDay(index, {
+                            isRest,
+                            templateId: isRest ? "" : e.target.value,
+                            label: day.label || (isRest ? "REPOS" : ""),
+                          });
+                        }}
+                      >
+                        <option value="REST">Repos</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>{template.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="button" className="cycle-remove-button" onClick={() => removeScheduleDay(index)}>×</button>
+                  </article>
+                ))}
+              </div>
+
+              <div className="cycle-actions">
+                <button type="button" onClick={addScheduleDay}>+ Ajouter un jour</button>
+                <button type="button" className="primary" onClick={saveSchedule} disabled={scheduleSaving}>
+                  {scheduleSaving ? "Enregistrement..." : "Enregistrer le cycle"}
+                </button>
+                {scheduleEditorDays.length > 0 && (
+                  <button type="button" className="danger" onClick={clearSchedule} disabled={scheduleSaving}>Supprimer</button>
+                )}
+              </div>
+
+              {activeScheduleDay && workoutSchedule?.days.length ? (
+                <p className="cycle-current-day">Aujourd'hui : J{activeScheduleDay.dayIndex} · {activeScheduleDay.isRest ? "Repos" : activeScheduleDay.template?.name ?? "Programme"}</p>
+              ) : null}
+              {scheduleMessage && <p className="success">{scheduleMessage}</p>}
+              {scheduleError && <p className="error">{scheduleError}</p>}
+            </section>
+          )}
 
           {!editingTemplate && (
             <section className="card">

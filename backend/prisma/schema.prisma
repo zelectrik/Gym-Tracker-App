@@ -17,6 +17,8 @@ model User {
   bodyGoals             BodyGoal[]
   bodySnapshots         BodySnapshot[]
   nutritionEntries      NutritionEntry[]
+  workoutScheduleConfig WorkoutScheduleConfig?
+  workoutScheduleDays   WorkoutScheduleDay[]
   workoutParticipations WorkoutParticipant[]
   ownedTemplates        WorkoutTemplate[]    @relation("TemplateOwner")
 }
@@ -46,6 +48,7 @@ model WorkoutTemplate {
   exercises   TemplateExercise[]
   sessions    WorkoutSession[]
   owner       User               @relation("TemplateOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  scheduleDays WorkoutScheduleDay[]
 
   @@index([ownerId])
 }
@@ -88,6 +91,33 @@ model WorkoutSession {
 
   @@index([status])
   @@index([scheduledAt])
+}
+
+model WorkoutScheduleConfig {
+  userId   String   @id
+  startsAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WorkoutScheduleDay {
+  id         String   @id @default(uuid())
+  userId     String
+  dayIndex   Int
+  templateId String?
+  isRest     Boolean  @default(false)
+  label      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, dayIndex])
+  @@index([userId])
+  @@index([templateId])
 }
 
 model WorkoutParticipant {
