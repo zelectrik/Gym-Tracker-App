@@ -18,6 +18,8 @@ import type {
   BodySnapshotPayload,
   BodyGoal,
   BodyGoalPayload,
+  NutritionEntry,
+  NutritionEntryPayload,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -266,6 +268,22 @@ export const api = {
     }),
   deleteBodyGoal: (goalId: string) =>
     request(`/body/goals/${goalId}`, {
+      method: "DELETE",
+    }),
+  nutritionEntries: (range?: { startDate?: string; endDate?: string }) => {
+    const params = new URLSearchParams();
+    if (range?.startDate) params.set("startDate", range.startDate);
+    if (range?.endDate) params.set("endDate", range.endDate);
+    const query = params.toString();
+    return request<NutritionEntry[]>(`/nutrition/entries${query ? `?${query}` : ""}`);
+  },
+  saveNutritionEntry: (body: NutritionEntryPayload) =>
+    request<NutritionEntry>("/nutrition/entries", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteNutritionEntry: (entryId: string) =>
+    request(`/nutrition/entries/${entryId}`, {
       method: "DELETE",
     }),
 };

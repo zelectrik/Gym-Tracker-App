@@ -16,6 +16,7 @@ model User {
   updatedAt             DateTime             @updatedAt
   bodyGoals             BodyGoal[]
   bodySnapshots         BodySnapshot[]
+  nutritionEntries      NutritionEntry[]
   workoutParticipations WorkoutParticipant[]
   ownedTemplates        WorkoutTemplate[]    @relation("TemplateOwner")
 }
@@ -158,6 +159,24 @@ model ExerciseSet {
   @@unique([sessionExerciseId, setNumber, side])
 }
 
+model NutritionEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime
+  mealType    MealType @default(OTHER)
+  description String
+  calories    Float
+  proteinG    Float    @default(0)
+  carbsG      Float    @default(0)
+  fatG        Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([userId, date])
+}
+
 model BodySnapshot {
   id         String   @id @default(uuid())
   userId     String
@@ -260,6 +279,14 @@ enum ProgressionType {
   DURATION
 }
 
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  OTHER
+}
+
 enum BodyMetric {
   WEIGHT_KG
   NECK_CM
@@ -268,11 +295,11 @@ enum BodyMetric {
   HIPS_CM
   ARM_CM
   THIGH_CM
-  CHEST_WAIST_RATIO
 }
 
 enum BodyGoalType {
   LOSS
+  MAINTAIN
   GAIN
   MAINTAIN_ABOVE
   MAINTAIN_BELOW

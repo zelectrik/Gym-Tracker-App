@@ -2407,7 +2407,7 @@ button.danger:hover,
 
 .domain-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 8px;
   position: sticky;
@@ -2932,5 +2932,241 @@ button.danger:hover,
     min-height: 38px;
     padding: 0 4px;
     font-size: 11px;
+  }
+}
+
+/* ===== NUTRITION V1 ===== */
+.nutrition-dashboard {
+  display: grid;
+  gap: 12px;
+}
+
+.nutrition-hero-card,
+.nutrition-form-card,
+.nutrition-history-card,
+.nutrition-today-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 20px;
+}
+
+.nutrition-hero-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.nutrition-hero-card h3 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.nutrition-hero-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nutrition-progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.nutrition-progress {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.nutrition-progress.over {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.nutrition-progress-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.nutrition-progress-topline span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.nutrition-progress-topline b {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.nutrition-progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.nutrition-progress-track span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #22c55e);
+}
+
+.nutrition-progress.over .nutrition-progress-track span {
+  background: linear-gradient(90deg, #f97316, #ef4444);
+}
+
+.nutrition-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.nutrition-form .wide {
+  grid-column: 1 / -1;
+}
+
+.nutrition-date-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.nutrition-average-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.nutrition-average-grid div {
+  padding: 12px;
+  border: 1px solid #dbe7ff;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.nutrition-average-grid span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.nutrition-average-grid b {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.nutrition-day-list,
+.nutrition-entry-list {
+  display: grid;
+  gap: 8px;
+}
+
+.nutrition-day-card,
+.nutrition-entry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: inherit;
+  text-align: left;
+}
+
+.nutrition-day-card.active {
+  border-color: #2563eb;
+  background: #eef4ff;
+}
+
+.nutrition-day-card b,
+.nutrition-entry-row b {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.nutrition-day-card span,
+.nutrition-day-card small,
+.nutrition-entry-row span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nutrition-day-card strong {
+  display: block;
+  color: #0f172a;
+  font-size: 17px;
+  text-align: right;
+}
+
+.nutrition-entry-row button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.nutrition-day-detail {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.nutrition-day-detail h4,
+.nutrition-today-card h3 {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .nutrition-form,
+  .nutrition-date-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .nutrition-hero-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nutrition-day-card,
+  .nutrition-entry-row {
+    align-items: flex-start;
+  }
+}
+
+.dashboard-tabs.nutrition-footer-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 520px) {
+  .domain-switch button {
+    min-height: 42px;
+    font-size: 14px;
   }
 }

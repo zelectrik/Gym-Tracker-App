@@ -265,6 +265,33 @@ export type BodyGoalPayload = {
   isActive?: boolean;
 };
 
+
+export type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK" | "OTHER";
+
+export type NutritionEntry = {
+  id: string;
+  userId: string;
+  date: string;
+  mealType: MealType;
+  description: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type NutritionEntryPayload = {
+  date: string;
+  mealType: MealType;
+  description: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+};
+
 export type LastExercisePerformance = {
   exerciseId: string;
   exerciseName: string;

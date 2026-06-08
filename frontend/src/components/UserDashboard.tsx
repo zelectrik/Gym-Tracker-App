@@ -13,9 +13,10 @@ import { CreateTemplate } from "./CreateTemplate";
 import { ImportProgramJson } from "./ImportProgramJson";
 import { StatsDashboard, WorkoutSessionDetail } from "./StatsDashboard";
 import { PhysicalTrackingDashboard, type PhysicalTab } from "./PhysicalTrackingDashboard";
+import { NutritionDashboard, type NutritionTab } from "./NutritionDashboard";
 
 type DashboardTab = "sessions" | "history" | "exercises" | "programs" | "physical";
-type DashboardDomain = "gym" | "physical";
+type DashboardDomain = "gym" | "physical" | "nutrition";
 
 function formatTemplateTarget(item: WorkoutTemplate["exercises"][number]) {
   if (item.targetDurationSec) {
@@ -115,6 +116,7 @@ export function UserDashboard({ user }: { user: User }) {
   const [activeDomain, setActiveDomain] = useState<DashboardDomain>("gym");
   const [activeTab, setActiveTab] = useState<DashboardTab>("sessions");
   const [activePhysicalTab, setActivePhysicalTab] = useState<PhysicalTab>("dashboard");
+  const [activeNutritionTab, setActiveNutritionTab] = useState<NutritionTab>("dashboard");
   const [selectedHistorySession, setSelectedHistorySession] = useState<WorkoutSession | null>(null);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
@@ -163,6 +165,11 @@ export function UserDashboard({ user }: { user: User }) {
   function openPhysical() {
     setActiveDomain("physical");
     setActiveTab("physical");
+  }
+
+  function openNutrition(tab: NutritionTab = "dashboard") {
+    setActiveDomain("nutrition");
+    setActiveNutritionTab(tab);
   }
 
   async function launch(template: WorkoutTemplate) {
@@ -328,6 +335,13 @@ export function UserDashboard({ user }: { user: User }) {
         >
           Physique
         </button>
+        <button
+          type="button"
+          className={activeDomain === "nutrition" ? "active" : ""}
+          onClick={() => openNutrition()}
+        >
+          Nutrition
+        </button>
       </nav>
 
       {activeDomain === "gym" && activeTab === "sessions" && (
@@ -492,8 +506,12 @@ export function UserDashboard({ user }: { user: User }) {
         />
       )}
 
-      <nav className="dashboard-tabs card gym-footer-tabs" aria-label="Navigation principale">
-        {activeDomain === "gym" ? (
+      {activeDomain === "nutrition" && (
+        <NutritionDashboard activeNutritionTab={activeNutritionTab} />
+      )}
+
+      <nav className={`dashboard-tabs card gym-footer-tabs ${activeDomain === "nutrition" ? "nutrition-footer-tabs" : ""}`} aria-label="Navigation principale">
+        {activeDomain === "gym" && (
           <>
             <TabButton active={activeTab === "sessions"} onClick={() => openGymTab("sessions")}>
               Séances
@@ -508,7 +526,8 @@ export function UserDashboard({ user }: { user: User }) {
               Programmes
             </TabButton>
           </>
-        ) : (
+        )}
+        {activeDomain === "physical" && (
           <>
             <TabButton active={activePhysicalTab === "dashboard"} onClick={() => setActivePhysicalTab("dashboard")}>
               Dashboard
@@ -520,6 +539,16 @@ export function UserDashboard({ user }: { user: User }) {
               Objectifs
             </TabButton>
             <TabButton active={activePhysicalTab === "history"} onClick={() => setActivePhysicalTab("history")}>
+              Historique
+            </TabButton>
+          </>
+        )}
+        {activeDomain === "nutrition" && (
+          <>
+            <TabButton active={activeNutritionTab === "dashboard"} onClick={() => setActiveNutritionTab("dashboard")}>
+              Dashboard
+            </TabButton>
+            <TabButton active={activeNutritionTab === "history"} onClick={() => setActiveNutritionTab("history")}>
               Historique
             </TabButton>
           </>
