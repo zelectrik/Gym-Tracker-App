@@ -78,3 +78,9 @@ export const createExerciseSchema = z.object({
   muscles: z.array(z.enum(muscleTags)).default([]),
   description: z.string().trim().optional(),
 });
+
+
+export const updateExerciseSchema = createExerciseSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "Au moins un champ doit être modifié." },
+);

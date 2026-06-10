@@ -3632,3 +3632,104 @@ button.danger:hover,
     justify-self: end;
   }
 }
+
+/* ===== ADMIN EXERCISE EDITING V33 ===== */
+.admin-dashboard-v2 {
+  gap: 14px;
+}
+
+.admin-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-hero-card p {
+  max-width: 560px;
+}
+
+.admin-exercise-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-exercise-search {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 14px;
+  border: 1px solid #dbe7ff;
+  border-radius: 16px;
+  background: #f8fafc;
+  font: inherit;
+  font-weight: 800;
+}
+
+.admin-exercise-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-exercise-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.admin-exercise-row > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-exercise-row b {
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.admin-exercise-row span,
+.admin-exercise-row small {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-exercise-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-exercise-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .admin-hero-card,
+  .admin-exercise-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .admin-hero-card {
+    display: grid;
+  }
+
+  .admin-exercise-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-exercise-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}

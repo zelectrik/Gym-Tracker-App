@@ -94,12 +94,28 @@ export const api = {
   createExercise: (body: {
     name: string;
     muscleGroup: MuscleGroup;
+    type?: Exercise["type"];
     progressionType?: ProgressionType;
     description?: string;
   }) =>
     request<Exercise>("/exercises", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  updateExercise: (exerciseId: string, body: {
+    name?: string;
+    muscleGroup?: MuscleGroup;
+    type?: Exercise["type"];
+    progressionType?: ProgressionType;
+    description?: string;
+  }) =>
+    request<Exercise>(`/exercises/${exerciseId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteExercise: (exerciseId: string) =>
+    request(`/exercises/${exerciseId}`, {
+      method: "DELETE",
     }),
   templates: () => request<WorkoutTemplate[]>("/workouts/templates"),
   workoutSchedule: () => request<WorkoutSchedule>("/workouts/schedule"),
